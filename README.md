@@ -43,10 +43,17 @@ Las partidas se guardan en el `localStorage` del navegador, por separado para lo
 
 | Acción | Teclado | Móvil |
 | --- | --- | --- |
-| Moverse | ← → / A D | Botones ◀ ▶ |
-| Saltar (mantener = más alto) | Espacio / ↑ / W | Botón ▲ |
+| Moverse | A D / ← → | Botones ◀ ▶ |
+| Saltar (mantener = más alto) | Espacio / W / ↑ | Botón ▲ |
+| Doble salto y planeo (Propulsión) | Espacio en el aire / mantener | Botón ▲ |
+| Rayo de energía | F | Botón de poder (icono rayo) |
+| Lanzallamas (mantener) | R | Botón de poder (icono llama) |
 | Pausa | Esc / P | Botón II |
 | Silenciar | M | Botón S |
+| Tienda (desde la selección de niveles) | T | Botón TIENDA |
+
+Las habilidades activas se asignan a una tecla en `abilities.json` (`"button": "primary"` = F,
+`"secondary"` = R); los atajos se definen en [src/games/platformer/controls.ts](src/games/platformer/controls.ts).
 
 ## Estructura
 

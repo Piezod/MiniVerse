@@ -8,6 +8,7 @@ import { PLATFORMER_ASSETS } from './assets/manifest';
 import { BIOMES } from './biomes';
 import { releaseLevels } from './level/levelLoader';
 import { releaseGameData } from './progression/gameData';
+import { PlatformerAffinityScene } from './scenes/PlatformerAffinityScene';
 import { PlatformerHudScene } from './scenes/PlatformerHudScene';
 import { PlatformerLevelScene } from './scenes/PlatformerLevelScene';
 import { PlatformerLevelSelectScene } from './scenes/PlatformerLevelSelectScene';
@@ -16,7 +17,7 @@ import { PlatformerShopScene } from './scenes/PlatformerShopScene';
 
 export const platformerModule: MiniGameModule = {
   entryScene: PlatformerPreloadScene.KEY,
-  scenes: [PlatformerPreloadScene, PlatformerLevelSelectScene, PlatformerShopScene, PlatformerLevelScene, PlatformerHudScene],
+  scenes: [PlatformerPreloadScene, PlatformerLevelSelectScene, PlatformerShopScene, PlatformerAffinityScene, PlatformerLevelScene, PlatformerHudScene],
   unload(game) {
     removeAnimations(game.anims, PLATFORMER_ANIMS);
     removeAnimations(game.anims, ENEMY_ANIMS);

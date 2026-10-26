@@ -1,0 +1,13 @@
+{
+  "elements": {
+    "energy": { "name": "Energia", "color": "#ffe14d" },
+    "laser": { "name": "Laser", "color": "#ff4d6d" },
+    "plasma": { "name": "Plasma", "color": "#c86bff" },
+    "cryo": { "name": "Criogenico", "color": "#7fe3ff" },
+    "fire": { "name": "Fuego", "color": "#ff8a2b" }
+  },
+  "cycle": ["energy", "laser", "plasma", "cryo", "fire"],
+  "advantage": 1.5,
+  "disadvantage": 0.5,
+  "overrides": {}
+}

@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { ENEMY_SPRITES, enemyAnimKey, type EnemySpriteDef } from '../assets/enemySprites';
 import { hex } from '../assets/palette';
-import { Health, type Hit, type HitResult } from '../combat/damage';
+import { type Defense, Health, type Hit, type HitResult } from '../combat/damage';
+import type { ElementChart } from '../combat/elements';
 import { Cooldown } from '../combat/resources';
+import { rollEffects, type StatusDef, StatusEffects } from '../combat/status';
 import { type AiState, nextAiState } from '../enemies/ai';
 import type { EnemyDef } from '../enemies/EnemyCatalog';
 import { DEPTH } from '../view/ParallaxBackground';
@@ -10,6 +12,10 @@ import { DEPTH } from '../view/ParallaxBackground';
 /** What an enemy needs from the level, without depending on the scene class. */
 export interface EnemyHost {
   readonly terrain: Phaser.Tilemaps.TilemapLayer;
+  /** Elemental affinity chart (elements.json). */
+  readonly chart: ElementChart;
+  /** Status effect definitions (status-effects.json). */
+  readonly statusCatalog: Readonly<Record<string, StatusDef>>;
   target(): { x: number; y: number; alive: boolean };
   enemyShoot(enemy: Enemy, vx: number, vy: number, damage: number): void;
   enemyDied(enemy: Enemy): void;
@@ -24,6 +30,8 @@ const STOMP_IMMUNITY = 0.7;
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   declare body: Phaser.Physics.Arcade.Body;
   readonly health: Health;
+  readonly status: StatusEffects;
+  private readonly defense: Defense;
   private readonly sprite: EnemySpriteDef;
   private readonly attackCooldown: Cooldown;
   private ai: AiState = 'patrol';
@@ -47,6 +55,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, sprite.texture, sprite.anims.move[0]);
     this.sprite = sprite;
     this.health = new Health(def.maxHealth);
+    this.defense = { element: def.element, armor: def.armor, resist: def.resist, formResist: def.formResist, immune: def.immune };
+    this.status = new StatusEffects(host.statusCatalog, { element: def.element, immune: def.statusImmune });
     this.attackCooldown = new Cooldown(def.attack?.cooldown ?? 1);
     this.homeY = y;
     scene.add.existing(this);
@@ -72,38 +82,64 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return this.ai;
   }
 
-  /** Applies a hit through the shared damage model, including the frontal guard. */
+  /**
+   * Applies a hit through the shared damage model. Situational modifiers added here: the frontal
+   * guard and status vulnerability (Sobrecarga). Status effects of the hit are rolled afterwards.
+   */
   applyHit(hit: Hit): HitResult {
-    if (!this.isAlive) return { damage: 0, killed: false };
-    if (hit.type === 'stomp') {
-      if (this.stompImmunity > 0) return { damage: 0, killed: false };
+    if (!this.isAlive) return { damage: 0, killed: false, immune: false };
+    if (hit.form === 'stomp') {
+      if (this.stompImmunity > 0) return { damage: 0, killed: false, immune: false };
       this.stompImmunity = STOMP_IMMUNITY;
     }
-    let amount = hit.amount;
-    if (this.def.guard !== undefined && hit.type !== 'stomp' && hit.fromX !== undefined && Math.sign(hit.fromX - this.x) === this.direction) amount *= this.def.guard;
-    const result = this.health.apply({ ...hit, amount }, { armor: this.def.armor, resist: this.def.resist });
-    if (result.damage > 0) {
+    let situational = (hit.situational ?? 1) * this.status.damageTakenMultiplier;
+    if (this.def.guard !== undefined && hit.form !== 'stomp' && hit.form !== 'status' && hit.fromX !== undefined && Math.sign(hit.fromX - this.x) === this.direction) {
+      situational *= this.def.guard;
+    }
+    const result = this.health.apply({ ...hit, situational }, this.defense, this.host.chart);
+    if (result.damage > 0 && hit.form !== 'status') {
       this.hurtTime = HURT_TIME;
       this.setTintFill(0xffffff);
-      this.scene.time.delayedCall(80, () => (this.def.tint ? this.setTint(hex(this.def.tint)) : this.clearTint()));
+      this.scene.time.delayedCall(80, () => this.restoreTint());
       if (hit.fromX !== undefined && this.def.movement !== 'stationary') this.body.setVelocityX(Math.sign(this.x - hit.fromX) * 60);
     }
     if (result.killed) this.die();
+    else if (!result.immune && hit.effects?.length) {
+      for (const id of rollEffects(hit.effects, Math.random)) this.status.apply(id);
+      this.restoreTint();
+    }
     return result;
   }
 
   /** Instant kill (stomp rule "kill"). */
   kill(): void {
     if (!this.isAlive) return;
-    this.health.apply({ amount: this.health.current, type: 'stomp' });
+    this.health.apply({ amount: this.health.current, form: 'stomp', ignoreArmor: true });
     this.die();
   }
 
   update(_time: number, delta: number): void {
     if (!this.isAlive) return;
     const dt = delta / 1000;
-    this.elapsed += dt;
-    this.attackCooldown.update(dt);
+    const hadStatus = this.status.ids.length > 0;
+    for (const tick of this.status.update(dt)) {
+      this.applyHit({ amount: tick.amount, form: 'status', element: tick.element, ignoreArmor: true });
+      if (!this.isAlive) return;
+    }
+    if (hadStatus && this.status.ids.length === 0) this.restoreTint();
+    const body = this.body;
+    if (this.status.stunned) {
+      body.setVelocityX(0);
+      if (this.def.movement === 'fly') body.setVelocityY(0);
+      this.anims.pause();
+      this.drawHealthBar();
+      return;
+    }
+    if (this.anims.isPaused) this.anims.resume();
+    const slow = this.status.speedMultiplier;
+    const step = dt * slow;
+    this.elapsed += step;
+    this.attackCooldown.update(step);
     this.hurtTime = Math.max(0, this.hurtTime - dt);
     this.attackTime = Math.max(0, this.attackTime - dt);
     this.stompImmunity = Math.max(0, this.stompImmunity - dt);
@@ -123,8 +159,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.attacked = false;
     }
 
-    const body = this.body;
-    const speed = this.def.speed;
+    const speed = this.def.speed * slow;
     const toward = Math.sign(target.x - this.x) || this.direction;
     switch (this.ai) {
       case 'hurt':
@@ -133,7 +168,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         break;
       case 'attack':
         this.direction = toward;
-        this.performAttack(target);
+        this.performAttack(target, slow);
         break;
       case 'chase':
         this.direction = toward;
@@ -145,7 +180,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         break;
       case 'patrol':
-        this.patrol();
+        this.patrol(speed);
         break;
       case 'idle':
         body.setVelocityX(0);
@@ -161,12 +196,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.drawHealthBar();
   }
 
-  private patrol(): void {
+  private patrol(speed: number): void {
     const body = this.body;
     if (body.blocked.left) this.direction = 1;
     else if (body.blocked.right) this.direction = -1;
     else if (body.blocked.down && !this.groundAhead()) this.direction *= -1;
-    body.setVelocityX(this.def.speed * this.direction);
+    body.setVelocityX(speed * this.direction);
+  }
+
+  /** Definition tint, overridden by the most recent status effect tint. */
+  private restoreTint(): void {
+    if (!this.active) return;
+    const tint = this.status.tint ?? this.def.tint;
+    if (tint) this.setTint(hex(tint));
+    else this.clearTint();
   }
 
   private groundAhead(): boolean {
@@ -177,13 +220,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return !!tile && tile.collideUp;
   }
 
-  private performAttack(target: { x: number; y: number }): void {
+  private performAttack(target: { x: number; y: number }, slow: number): void {
     const attack = this.def.attack;
     if (!attack || this.attacked) return;
     const body = this.body;
     if (attack.kind === 'hop') {
       if (!body.blocked.down) return;
-      body.setVelocity(this.direction * Math.max(this.def.speed, 40), -attack.power);
+      body.setVelocity(this.direction * Math.max(this.def.speed, 40) * slow, -attack.power * Math.sqrt(slow));
     } else {
       body.setVelocityX(0);
       const angle = this.def.movement === 'fly' ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.direction > 0 ? 0 : Math.PI;
@@ -195,6 +238,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   private die(): void {
     this.ai = 'death';
+    this.status.clear();
+    if (this.anims.isPaused) this.anims.resume();
     this.body.stop();
     this.body.enable = false;
     this.bar?.clear();

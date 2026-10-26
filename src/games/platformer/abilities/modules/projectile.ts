@@ -6,7 +6,8 @@ import { type AbilityModule, param } from '../Ability';
 
 /**
  * Horizontal projectile (Rayo de energía). params: damage, range (px), speed (px/s).
- * Energy per shot = level.energy, fire rate = level.cooldown.
+ * Energy per shot = level.energy, fire rate = level.cooldown. Element and status effects come from
+ * the ability definition, so other weapons can reuse this module with a different affinity.
  */
 export const projectile: AbilityModule = (ctx, def, level, stats) => {
   const cooldown = new Cooldown(stats.cooldown);
@@ -27,7 +28,7 @@ export const projectile: AbilityModule = (ctx, def, level, stats) => {
       const x = player.x + dir * 10;
       // Low enough to hit short ground enemies (walker body is 10px tall).
       const y = player.body.bottom - 9;
-      combat.firePlayerShot({ x, y, vx: dir * speed, damage, type: 'beam', range });
+      combat.firePlayerShot({ x, y, vx: dir * speed, damage, element: def.element, effects: stats.effects, range });
       fx.impact(x, y, 'beam');
       player.playAction([ANIM.player.shoot, ANIM.player.attack], 200);
       playSound(ctx.scene, AUDIO.beam);

@@ -1,5 +1,5 @@
 /** Enemy definitions loaded from enemies.json (Phaser-free so they can be validated in tests). */
-import { DAMAGE_TYPES, type DamageType } from '../combat/damage';
+import { ATTACK_FORMS, type AttackForm } from '../combat/damage';
 
 export const MOVEMENTS = ['patrol', 'chase', 'fly', 'stationary'] as const;
 export const STOMP_RULES = ['kill', 'damage', 'immune'] as const;
@@ -16,6 +16,8 @@ export interface EnemyAttack {
   damage: number;
   /** Projectile speed (shoot) or jump velocity (hop), px/s. */
   power: number;
+  /** Element of the attack; defaults to the enemy's element. */
+  element: string | null;
 }
 
 export interface EnemyDef {
@@ -31,7 +33,16 @@ export interface EnemyDef {
   contactDamage: number;
   speed: number;
   armor: number;
-  resist: Partial<Record<DamageType, number>>;
+  /** Main elemental type (elements.json id). */
+  element: string | null;
+  /** Personal multipliers per element, applied after the affinity chart. */
+  resist: Record<string, number>;
+  /** Multipliers per attack form (contact, stomp, projectile, area, status). */
+  formResist: Partial<Record<AttackForm, number>>;
+  /** Elements and/or forms that deal no damage. */
+  immune: string[];
+  /** Status effects this enemy never receives. */
+  statusImmune: string[];
   /** What happens when the player lands on it. */
   stomp: StompRule;
   stompDamage: number;
@@ -60,8 +71,17 @@ type RawEnemy = Record<string, unknown>;
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+export interface CombatIds {
+  /** Element ids from elements.json. When given, every enemy must declare a valid "element". */
+  elements?: readonly string[];
+  /** Status effect ids from status-effects.json. */
+  statuses?: readonly string[];
+}
+
 /** Resolves `extends` chains (variants) and validates every field. Invalid enemies are left out. */
-export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[]): EnemyCatalog {
+export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[], ids: CombatIds = {}): EnemyCatalog {
+  const elements = ids.elements;
+  const isElement = (e: string): boolean => (elements ? elements.includes(e) : true);
   const issues: CatalogIssue[] = [];
   const enemies: Record<string, EnemyDef> = {};
   if (!isRecord(raw)) return { enemies, issues: [{ id: '*', message: 'enemies.json debe ser un objeto { id: definición }' }] };
@@ -80,7 +100,8 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[])
       return null;
     }
     const merged: RawEnemy = { ...parent, ...entry };
-    if (isRecord(parent.resist) || isRecord(entry.resist)) merged.resist = { ...(parent.resist as object), ...(entry.resist as object) };
+    for (const key of ['resist', 'formResist'])
+      if (isRecord(parent[key]) || isRecord(entry[key])) merged[key] = { ...(parent[key] as object), ...(entry[key] as object) };
     if (isRecord(parent.attack) && isRecord(entry.attack)) merged.attack = { ...parent.attack, ...entry.attack };
     return merged;
   };
@@ -109,16 +130,39 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[])
     const sprite = typeof r.sprite === 'string' ? r.sprite : '';
     if (!knownSprites.includes(sprite)) errors.push(`"sprite" debe ser uno de: ${knownSprites.join(', ')}`);
     const maxHealth = num('maxHealth', 0.1, 999);
-    const resist: Partial<Record<DamageType, number>> = {};
-    if (r.resist !== undefined) {
-      if (!isRecord(r.resist)) errors.push('"resist" debe ser un objeto');
-      else
-        for (const [type, value] of Object.entries(r.resist)) {
-          if (!DAMAGE_TYPES.includes(type as DamageType)) errors.push(`"resist.${type}": tipo de daño desconocido`);
-          else if (typeof value !== 'number' || value < 0 || value > 10) errors.push(`"resist.${type}" debe estar entre 0 y 10`);
-          else resist[type as DamageType] = value;
-        }
-    }
+    let element: string | null = null;
+    if (typeof r.element === 'string' && isElement(r.element)) element = r.element;
+    else if (elements || r.element !== undefined) errors.push(`"element" debe ser uno de: ${(elements ?? []).join(', ')}`);
+
+    const multipliers = (key: string, valid: (k: string) => boolean, what: string): Record<string, number> => {
+      const out: Record<string, number> = {};
+      const value = r[key];
+      if (value === undefined) return out;
+      if (!isRecord(value)) {
+        errors.push(`"${key}" debe ser un objeto`);
+        return out;
+      }
+      for (const [k, m] of Object.entries(value)) {
+        if (!valid(k)) errors.push(`"${key}.${k}": ${what} desconocido`);
+        else if (typeof m !== 'number' || m < 0 || m > 10) errors.push(`"${key}.${k}" debe estar entre 0 y 10`);
+        else out[k] = m;
+      }
+      return out;
+    };
+    const resist = multipliers('resist', isElement, 'elemento');
+    const formResist = multipliers('formResist', (k) => ATTACK_FORMS.includes(k as AttackForm), 'forma de ataque');
+    const stringList = (key: string, valid: (k: string) => boolean, what: string): string[] => {
+      const value = r[key];
+      if (value === undefined) return [];
+      if (!Array.isArray(value) || value.some((v) => typeof v !== 'string')) {
+        errors.push(`"${key}" debe ser una lista de textos`);
+        return [];
+      }
+      (value as string[]).filter((v) => !valid(v)).forEach((v) => errors.push(`"${key}": ${what} desconocido "${v}"`));
+      return value as string[];
+    };
+    const immune = stringList('immune', (k) => isElement(k) || ATTACK_FORMS.includes(k as AttackForm), 'elemento o forma');
+    const statusImmune = stringList('statusImmune', (k) => !ids.statuses || ids.statuses.includes(k), 'estado');
     let attack: EnemyAttack | undefined;
     if (r.attack !== undefined) {
       if (!isRecord(r.attack)) errors.push('"attack" debe ser un objeto');
@@ -137,7 +181,9 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[])
           range: n('range', 8, 400, 120),
           damage: n('damage', 0, 10, 1),
           power: n('power', 10, 600, 100),
+          element: typeof a.element === 'string' ? a.element : element,
         };
+        if (typeof a.element === 'string' && !isElement(a.element)) errors.push(`"attack.element" desconocido: ${a.element}`);
       }
     }
     const def: EnemyDef = {
@@ -150,7 +196,11 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[])
       contactDamage: num('contactDamage', 0, 10, 1),
       speed: num('speed', 0, 200, 30),
       armor: num('armor', 0, 99, 0),
+      element,
       resist,
+      formResist,
+      immune,
+      statusImmune,
       stomp: oneOf('stomp', STOMP_RULES, 'kill'),
       stompDamage: num('stompDamage', 0, 99, 1),
       movement: oneOf('movement', MOVEMENTS, 'patrol'),
@@ -162,7 +212,7 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[])
       healthBar: typeof r.healthBar === 'boolean' ? r.healthBar : maxHealth > 1,
     };
     if (Number.isInteger(def.scale) === false) errors.push('"scale" debe ser entero');
-    if (def.boss && def.stomp === 'immune') errors.push('un jefe no puede ser inmune al salto (el nivel debe poder completarse sin habilidades)');
+    if (def.boss && (def.stomp === 'immune' || immune.includes('stomp') || formResist.stomp === 0)) errors.push('un jefe no puede ser inmune al salto (el nivel debe poder completarse sin habilidades)');
     if (errors.length) errors.forEach((message) => issues.push({ id, message }));
     else enemies[id] = def;
   }

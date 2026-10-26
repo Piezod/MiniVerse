@@ -5,9 +5,11 @@ import { createTextButton } from '../../../core/ui/TextButton';
 import { pixelText } from '../../../core/ui/pixelFont';
 import { TEX, UI_FRAME } from '../assets/manifest';
 import { hex, PALETTE } from '../assets/palette';
-import { LevelEvent, PLAYER_MAX_HP, PlatformerScenes, type PlatformerAction } from '../config';
+import { LevelEvent, PLAYER_MAX_HP, PlatformerScenes, type AbilityButton, type PlatformerAction } from '../config';
+import { ABILITY_BUTTONS, keyLabel } from '../controls';
 import { openLevelSelect, startLevel } from '../level/levelFlow';
 import { getGameData } from '../progression/gameData';
+import { PointerHold } from '../touchHold';
 import type { PlatformerLevelScene } from './PlatformerLevelScene';
 
 export interface HudData {
@@ -23,8 +25,9 @@ export class PlatformerHudScene extends Phaser.Scene {
   private hearts: Phaser.GameObjects.Image[] = [];
   private livesText!: Phaser.GameObjects.BitmapText;
   private energyBar!: Phaser.GameObjects.Graphics;
-  private slots: Array<{ x: number; y: number; size: number; overlay: Phaser.GameObjects.Graphics }> = [];
+  private slots: Array<{ button: AbilityButton; x: number; y: number; size: number; overlay: Phaser.GameObjects.Graphics }> = [];
   private muteIcon!: Phaser.GameObjects.Image;
+  private touchHolds: Array<() => void> = [];
   private overlay: Phaser.GameObjects.Container | null = null;
   private overlayPrimary: (() => void) | null = null;
   private paused = false;
@@ -47,6 +50,7 @@ export class PlatformerHudScene extends Phaser.Scene {
     this.livesText = pixelText(this, 8 + PLAYER_MAX_HP * 9, 17, '', 0xfff8ec);
     this.energyBar = this.add.graphics();
     this.slots = [];
+    this.touchHolds = [];
     this.updateStars(this.level.starCount, this.level.starTotal);
     this.updateLives(this.level.livesLeft);
     this.updateHealth(this.level.health.current);
@@ -105,8 +109,8 @@ export class PlatformerHudScene extends Phaser.Scene {
       this.energyBar.fillStyle(0x141327).fillRect(5, 25, 32, 4);
       this.energyBar.fillStyle(hex(PALETTE.glow)).fillRect(6, 26, Math.round(30 * abilities.energy.fraction), 2);
     }
-    this.slots.forEach((slot, i) => {
-      const ability = abilities.actives[i];
+    this.slots.forEach((slot) => {
+      const ability = abilities.on(slot.button);
       slot.overlay.clear();
       if (!ability) return;
       const remaining = ability.cooldown.remaining;
@@ -118,22 +122,24 @@ export class PlatformerHudScene extends Phaser.Scene {
     });
   }
 
-  /** Shows equipped active abilities: small icons on desktop, big touch buttons on mobile. */
+  /** Shows equipped active abilities: small icons with their key on desktop, big touch buttons on mobile. */
   private createAbilitySlots(touch: boolean): void {
-    const actives = getGameData().profile.activeSlots.map((id) => getGameData().abilities.abilities[id]).filter(Boolean);
-    actives.forEach((def, i) => {
-      const action: PlatformerAction = i === 0 ? 'skill1' : 'skill2';
+    const { profile, abilities } = getGameData();
+    ABILITY_BUTTONS.forEach((button, i) => {
+      const id = profile.equippedOn(button);
+      const def = id ? abilities.abilities[id] : undefined;
+      if (!def) return;
       if (touch) {
         const x = i === 0 ? GAME_WIDTH - 72 : GAME_WIDTH - 30;
         const y = i === 0 ? GAME_HEIGHT - 26 : GAME_HEIGHT - 68;
-        this.createTouchButton(x, y, action, def.icon);
-        this.slots.push({ x, y, size: 28, overlay: this.add.graphics() });
+        this.createTouchButton(x, y, button, def.icon);
+        this.slots.push({ button, x, y, size: 28, overlay: this.add.graphics() });
       } else {
         const x = 54 + i * 20;
         this.add.rectangle(x, 10, 14, 14, 0x141327, 0.6).setStrokeStyle(1, 0xfff8ec, 0.5);
         this.add.image(x, 10, TEX.abilityIcons, def.icon);
-        pixelText(this, x, 21, i === 0 ? 'J' : 'K', 0x9a86c4).setOrigin(0.5);
-        this.slots.push({ x, y: 10, size: 14, overlay: this.add.graphics() });
+        pixelText(this, x, 21, keyLabel(button), 0x9a86c4).setOrigin(0.5);
+        this.slots.push({ button, x, y: 10, size: 14, overlay: this.add.graphics() });
       }
     });
   }
@@ -172,19 +178,20 @@ export class PlatformerHudScene extends Phaser.Scene {
       else icon.fillTriangle(x, y - 7, x - 7, y + 5, x + 7, y + 5);
     }
 
-    // Track pointers individually so several fingers can hold different buttons (multi-touch).
-    const pointers = new Set<number>();
-    const sync = (): void => {
-      const down = pointers.size > 0;
+    // Each button tracks its own fingers (multi-touch); pausing drops them all.
+    const hold = new PointerHold();
+    const show = (down: boolean): void => {
       this.level.controls.setTouch(action, down);
       circle.setFillStyle(down ? 0x4a3f8a : 0x141327, down ? 0.6 : 0.35);
     };
+    this.touchHolds.push(() => {
+      if (hold.clear()) show(false);
+    });
     const press = (p: Phaser.Input.Pointer): void => {
-      pointers.add(p.id);
-      sync();
+      if (hold.press(p.id)) show(true);
     };
     const release = (p: Phaser.Input.Pointer): void => {
-      if (pointers.delete(p.id)) sync();
+      if (hold.release(p.id)) show(false);
     };
 
     const zone = this.add.zone(x, y, radius * 2 + 10, radius * 2 + 10).setInteractive();
@@ -203,6 +210,7 @@ export class PlatformerHudScene extends Phaser.Scene {
   private pauseGame(): void {
     if (this.paused || this.ended) return;
     this.paused = true;
+    this.touchHolds.forEach((clear) => clear());
     this.level.controls.clearTouch();
     this.scene.pause(PlatformerScenes.Level);
     this.showOverlay('Pausa', '', [

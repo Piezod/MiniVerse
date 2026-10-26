@@ -19,7 +19,7 @@ import { Player, PlayerEvent } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { AbilitySystem } from '../abilities/AbilitySystem';
 import { CombatSystem } from '../combat/CombatSystem';
-import { Health } from '../combat/damage';
+import { Health, type Hit } from '../combat/damage';
 import { getGameData } from '../progression/gameData';
 import { registerAnimations } from '../../../core/animation/AnimationRegistry';
 import { createMissingPlaceholders } from '../../../core/assets/AssetLoader';
@@ -160,11 +160,15 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
     const playerAlive = (): boolean => this.player.isAlive;
     this.physics.add.collider(this.player, layer, undefined, playerAlive);
-    this.combat = new CombatSystem(this, layer, this.player, this.fx, {
-      damagePlayer: (amount, fromX) => this.damagePlayer(amount, fromX),
-      enemyKilled: (enemy) => this.onEnemyKilled(enemy),
-    });
-    const { enemies: catalog, profile } = getGameData();
+    const { enemies: catalog, profile, chart, statuses } = getGameData();
+    this.combat = new CombatSystem(
+      this,
+      layer,
+      this.player,
+      this.fx,
+      { damagePlayer: (hit) => this.damagePlayer(hit), enemyKilled: (enemy) => this.onEnemyKilled(enemy) },
+      { chart, statusCatalog: statuses.effects },
+    );
     for (const p of level.enemies) {
       const def = catalog.enemies[p.type];
       if (def) this.combat.spawnEnemy(def, tileCenterX(p), tileBottom(p));
@@ -187,7 +191,14 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.scene.launch(PlatformerScenes.Hud, { level: this } satisfies HudData);
 
     const camera = this.cameras.main;
+    // Any interruption drops a charge in progress: no shot, no energy spent.
+    const cancelCharge = (): void => this.abilities.cancelAll();
+    this.events.on(Phaser.Scenes.Events.PAUSE, cancelCharge);
+    this.game.events.on(Phaser.Core.Events.BLUR, cancelCharge);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      cancelCharge();
+      this.events.off(Phaser.Scenes.Events.PAUSE, cancelCharge);
+      this.game.events.off(Phaser.Core.Events.BLUR, cancelCharge);
       camera.off(Phaser.Cameras.Scene2D.Events.FOLLOW_UPDATE, this.onCameraMoved, this);
       this.bus.removeAllListeners();
       this.controls.destroy();
@@ -197,7 +208,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.controls.update();
     this.player.update(this.controls, delta);
-    if (!this.finished) this.abilities.update(delta / 1000, this.controls);
+    if (this.finished) this.abilities.cancelAll();
+    else this.abilities.update(delta / 1000, this.controls);
     this.combat.update();
 
     if (this.player.isAlive && Math.abs(this.player.body.velocity.x) > 20) this.lookAhead = this.player.facing * CAMERA_LOOK_AHEAD;
@@ -270,10 +282,14 @@ export class PlatformerLevelScene extends Phaser.Scene {
     return glow;
   }
 
-  /** Every source of player damage ends here (contact, projectiles); pits kill directly. */
-  private damagePlayer(amount: number, fromX: number): void {
+  /**
+   * Every source of player damage ends here (contact, projectiles); pits kill directly. The hero has
+   * no element or armor yet, so enemy hits keep their base damage (neutral defense).
+   */
+  private damagePlayer(hit: Hit & { fromX: number }): void {
     if (!this.player.isAlive || this.player.isInvulnerable || this.finished) return;
-    const result = this.health.apply({ amount, type: 'contact', fromX });
+    const fromX = hit.fromX;
+    const result = this.health.apply(hit);
     this.bus.emit(LevelEvent.Health, this.health.current, this.health.max);
     if (result.killed) {
       this.killPlayer();
@@ -333,6 +349,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
   private killPlayer(): void {
     if (!this.player.isAlive) return;
+    this.abilities.cancelAll();
     playSound(this, AUDIO.hurt);
     this.fx.playerDeath(this.player.visual.x, this.player.visual.y - 12);
     this.cameras.main.shake(180, 0.006);

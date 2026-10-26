@@ -192,6 +192,39 @@ export class PlatformerFx {
     (kind === 'beam' ? this.zap : this.embers).explode(6, x, y);
   }
 
+  private chargeGlow: Phaser.GameObjects.Image | null = null;
+
+  /** Charging glow on the armor: pulsing halo plus sparks pulled toward the chest. Call every frame. */
+  setCharge(x: number, y: number, fraction: number, color: string): void {
+    const tint = hex(color);
+    this.chargeGlow ??= this.scene.add.image(x, y, TEX.glow).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.particles);
+    const pulse = 1 + 0.15 * Math.sin(this.scene.time.now / 40);
+    this.chargeGlow.setPosition(x, y).setTint(tint).setAlpha(0.35 + 0.6 * fraction).setScale((0.25 + 0.55 * fraction) * pulse);
+    if (Math.random() < 0.3 + fraction * 0.6) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = 14;
+      const spark = this.scene.add.rectangle(x + Math.cos(angle) * r, y + Math.sin(angle) * r, 1, 1, fraction >= 1 ? 0xffffff : tint).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.particles);
+      this.scene.tweens.add({ targets: spark, x, y, alpha: 0, duration: 200, onComplete: () => spark.destroy() });
+    }
+  }
+
+  endCharge(): void {
+    this.chargeGlow?.destroy();
+    this.chargeGlow = null;
+  }
+
+  /** Muzzle flash plus a short-lived beam (colored halo, bright core) from x0 to x1. */
+  laser(x0: number, x1: number, y: number, height: number, fraction: number, color: string): void {
+    this.flash(x0, y, hex(color), 0.8 + fraction);
+    const left = Math.min(x0, x1);
+    const width = Math.max(2, Math.abs(x1 - x0));
+    const add = (h: number, fill: number, alpha: number): Phaser.GameObjects.Rectangle =>
+      this.scene.add.rectangle(left, y, width, h, fill, alpha).setOrigin(0, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.particles);
+    const parts = [add(height + 2, hex(color), 0.55), add(height, hex(color), 0.9), add(Math.max(1, Math.round(height / 3)), 0xffffff, 1)];
+    this.scene.tweens.add({ targets: parts, alpha: 0, scaleY: 0.3, duration: 180 + fraction * 120, ease: 'Quad.easeOut', onComplete: () => parts.forEach((p) => p.destroy()) });
+    this.zap.explode(4 + Math.round(fraction * 8), x1, y);
+  }
+
   private flash(x: number, y: number, tint: number, scale: number): void {
     const glow = this.scene.add.image(x, y, TEX.glow).setTint(tint).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.particles).setScale(scale * 0.4);
     this.scene.tweens.add({ targets: glow, scale, alpha: 0, duration: 350, ease: 'Quad.easeOut', onComplete: () => glow.destroy() });

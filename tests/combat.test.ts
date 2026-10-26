@@ -10,31 +10,37 @@ import { Cooldown, EnergyPool } from '../src/games/platformer/combat/resources';
 import { nextAiState } from '../src/games/platformer/enemies/ai';
 import { buildEnemyCatalog, type EnemyDef } from '../src/games/platformer/enemies/EnemyCatalog';
 import { memoryStorage } from '../src/games/platformer/level/LevelManager';
+import { buildCatalogs } from '../src/games/platformer/progression/gameData';
 import { MAX_ACTIVE_ABILITIES, Profile } from '../src/games/platformer/progression/Profile';
 
 const ASSETS = join(__dirname, '../public/assets/platformer');
 const readJson = (path: string): unknown => JSON.parse(readFileSync(join(ASSETS, path), 'utf8'));
 const SPRITES = Object.keys(ENEMY_SPRITES);
-const enemies = buildEnemyCatalog(readJson('enemies/enemies.json'), SPRITES);
-const abilities = buildAbilityCatalog(readJson('abilities/abilities.json'), ABILITY_MODULE_IDS);
+const catalogs = buildCatalogs({
+  elements: readJson('combat/elements.json'),
+  statuses: readJson('combat/status-effects.json'),
+  enemies: readJson('enemies/enemies.json'),
+  abilities: readJson('abilities/abilities.json'),
+});
+const { enemies, abilities } = catalogs;
 
 describe('damage model', () => {
   it('applies resistances, armor and immunity', () => {
-    expect(computeDamage({ amount: 2, type: 'beam' }, { armor: 0, resist: {} })).toBe(2);
-    expect(computeDamage({ amount: 2, type: 'beam' }, { armor: 0, resist: { beam: 0.5 } })).toBe(1);
-    expect(computeDamage({ amount: 2, type: 'fire' }, { armor: 0, resist: { fire: 2 } })).toBe(4);
-    expect(computeDamage({ amount: 2, type: 'stomp' }, { armor: 0, resist: { stomp: 0 } })).toBe(0);
-    expect(computeDamage({ amount: 2, type: 'beam' }, { armor: 1.5, resist: {} })).toBe(0.5);
-    expect(computeDamage({ amount: 1, type: 'beam' }, { armor: 3, resist: {} })).toBe(0);
+    expect(computeDamage({ amount: 2, form: 'projectile', element: 'energy' }, { armor: 0, resist: {} })).toBe(2);
+    expect(computeDamage({ amount: 2, form: 'projectile', element: 'energy' }, { armor: 0, resist: { energy: 0.5 } })).toBe(1);
+    expect(computeDamage({ amount: 2, form: 'area', element: 'fire' }, { armor: 0, resist: { fire: 2 } })).toBe(4);
+    expect(computeDamage({ amount: 2, form: 'stomp' }, { armor: 0, resist: {}, formResist: { stomp: 0 } })).toBe(0);
+    expect(computeDamage({ amount: 2, form: 'projectile' }, { armor: 1.5, resist: {} })).toBe(0.5);
+    expect(computeDamage({ amount: 1, form: 'projectile' }, { armor: 3, resist: {} })).toBe(0);
   });
 
   it('tracks health, kills once and never goes below zero', () => {
     const hp = new Health(3);
-    expect(hp.apply({ amount: 1, type: 'contact' })).toEqual({ damage: 1, killed: false });
+    expect(hp.apply({ amount: 1, form: 'contact' })).toEqual({ damage: 1, killed: false, immune: false });
     expect(hp.fraction).toBeCloseTo(2 / 3);
-    expect(hp.apply({ amount: 5, type: 'contact' })).toEqual({ damage: 2, killed: true });
+    expect(hp.apply({ amount: 5, form: 'contact' })).toEqual({ damage: 2, killed: true, immune: false });
     expect(hp.current).toBe(0);
-    expect(hp.apply({ amount: 1, type: 'contact' })).toEqual({ damage: 0, killed: false });
+    expect(hp.apply({ amount: 1, form: 'contact' })).toEqual({ damage: 0, killed: false, immune: false });
     hp.heal(1);
     expect(hp.current).toBe(0);
     hp.reset();
@@ -74,7 +80,7 @@ describe('cooldowns and energy', () => {
 
 describe('enemy configuration (enemies.json)', () => {
   it('has no configuration errors', () => {
-    expect(enemies.issues).toEqual([]);
+    expect(catalogs.issues).toEqual([]);
   });
 
   it('provides a ground patroller, a flying chaser and a multi-hit tough enemy', () => {
@@ -197,7 +203,12 @@ describe('profile: stars, purchases and equipment', () => {
     profile.unequip('beam');
     expect(profile.activeSlots).toEqual(['flamethrower']);
     expect(profile.equip('beam')).toBe(true);
-    expect(profile.loadout().map((l) => l.def.id)).toEqual(['flamethrower', 'jetpack', 'beam']);
+    expect(profile.equippedOn('primary')).toBe('beam');
+    expect(profile.loadout().map((l) => [l.def.id, l.button])).toEqual([
+      ['jetpack', null],
+      ['beam', 'primary'],
+      ['flamethrower', 'secondary'],
+    ]);
     expect(fresh().equip('beam')).toBe(false);
   });
 
