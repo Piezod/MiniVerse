@@ -3,8 +3,10 @@
  * Besides structure, it simulates the player's real jump physics over the tile grid to find every
  * reachable spot, so unreachable goals and impossible jumps are reported before playing.
  */
-import type { EnemyDef } from '../enemies/EnemyCatalog';
+import { type EnemyDef, isFlying } from '../enemies/EnemyCatalog';
 import { validateObjects } from '../objects/validate';
+import { withObjectSupport } from '../objects/reachSupport';
+import { validateStory } from '../story/validate';
 import { GRAVITY, PLAYER_BODY, PLAYER_TUNING } from '../physics';
 import { DEFAULT_ENEMY_LEGEND, LEVEL_CHARS, type LevelData, type ParsedLevel, parseLevel, type TilePoint } from './LevelParser';
 import { TILE_SIZE as T } from './tileset';
@@ -114,16 +116,18 @@ export function validateLevel(
   parsed.portals.forEach((p) => needsGround('La meta', p));
   parsed.checkpoints.forEach((p) => needsGround('El checkpoint', p));
   parsed.enemies.forEach((p) => {
-    if (knownEnemies?.[p.type]?.movement === 'fly') return;
+    const flyer = knownEnemies?.[p.type];
+    if (flyer && isFlying(flyer)) return;
     if (!supportAt(p.col, p.row + 1)) warn(`El enemigo ${label(p)} no tiene suelo debajo y caerá`);
   });
   const objectCheck = validateObjects(level.objects, { width: parsed.width, height: parsed.height });
   for (const issue of objectCheck.issues) (issue.severity === 'error' ? error : warn)(`objects[${issue.index}]: ${issue.message}`);
+  for (const issue of validateStory(level.story, { width: parsed.width, height: parsed.height }).issues) error(`story${issue.index >= 0 ? `[${issue.index}]` : ''}: ${issue.message}`);
   if (issues.some((i) => i.severity === 'error') || !parsed.spawn) return { ok: false, issues, level, parsed };
 
-  // The jump simulation knows only terrain: with moving platforms or doors it can't prove or disprove reachability.
-  const reachProblem = objectCheck.objects.length > 0 ? (m: string) => warn(`${m} (aviso: los objetos del nivel no se simulan)`) : error;
-  const reach = analyzeReachability(parsed);
+  // The jump simulation sees the terrain plus the cells platforms visit (doors count as open).
+  const reach = analyzeReachability(objectCheck.objects.length > 0 ? withObjectSupport(parsed, objectCheck.objects) : parsed);
+  const reachProblem = error;
   for (const p of parsed.portals) if (!reach.touched.has(key(p.col, p.row))) reachProblem(`La meta ${label(p)} es inalcanzable desde el inicio`);
   for (const p of parsed.stars) if (!reach.touched.has(key(p.col, p.row))) reachProblem(`La estrella ${label(p)} es inalcanzable`);
   for (const p of parsed.checkpoints) if (!reach.touched.has(key(p.col, p.row))) reachProblem(`El checkpoint ${label(p)} es inalcanzable`);

@@ -66,6 +66,8 @@ export interface LevelCard {
   name: string;
   position: number;
   biome: string;
+  /** Announced episode without a level yet (shown as Proximamente). */
+  planned: boolean;
   valid: boolean;
   unlocked: boolean;
   completed: boolean;
@@ -74,17 +76,25 @@ export interface LevelCard {
 }
 
 export function levelCards(campaign: CampaignManager, chapterId: string): LevelCard[] {
-  return campaign.levelsOf(chapterId).map((entry, i) => ({
+  const published: LevelCard[] = campaign.levelsOf(chapterId).map((entry, i) => ({
     id: entry.id,
     name: entry.name,
     position: i + 1,
     biome: entry.biome,
+    planned: false,
     valid: entry.validation.ok,
     unlocked: campaign.isLevelUnlocked(entry.id),
     completed: campaign.isLevelCompleted(entry.id),
     stars: campaign.progressOfLevel(entry.id)?.stars ?? 0,
     starsTotal: entry.validation.parsed?.stars.length ?? 0,
   }));
+  // Announced episodes without a level yet (partially published chapters).
+  const biome = campaign.chapter(chapterId)?.biome ?? '';
+  const upcoming: LevelCard[] = campaign
+    .episodesOf(chapterId)
+    .filter((e) => !e.level)
+    .map((e, i) => ({ id: e.episode.id, name: e.episode.title, position: published.length + i + 1, biome, planned: true, valid: false, unlocked: false, completed: false, stars: 0, starsTotal: 0 }));
+  return [...published, ...upcoming];
 }
 
 /** Chapter shown when the level list opens without an explicit one. */

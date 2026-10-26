@@ -100,5 +100,35 @@
     "attack": { "kind": "shoot", "cooldown": 2.6, "range": 160, "damage": 1, "power": 110 },
     "boss": true,
     "reward": { "energy": 100 }
+  },
+  "drone-scout": {
+    "name": "Dron explorador",
+    "sprite": "drone",
+    "element": "energy",
+    "maxHealth": 1,
+    "contactDamage": 1,
+    "speed": 56,
+    "movement": "hover",
+    "detectRange": 104,
+    "patrol": { "range": 28, "bob": 5, "leash": 24 },
+    "stomp": "kill",
+    "attack": { "kind": "lunge", "cooldown": 2.8, "range": 44, "power": 132, "telegraph": 0.65 },
+    "reward": { "energy": 12 }
+  },
+  "drone-sentinel": {
+    "name": "Dron centinela",
+    "sprite": "sentinel",
+    "element": "laser",
+    "maxHealth": 3,
+    "contactDamage": 1,
+    "speed": 22,
+    "movement": "hover",
+    "detectRange": 144,
+    "patrol": { "range": 24, "bob": 4, "leash": 32, "standoff": 96 },
+    "stomp": "damage",
+    "stompDamage": 1,
+    "resist": { "laser": 0.5 },
+    "attack": { "kind": "shoot", "cooldown": 3.2, "range": 128, "damage": 1, "power": 82, "telegraph": 0.8 },
+    "reward": { "energy": 25 }
   }
 }

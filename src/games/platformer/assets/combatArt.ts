@@ -124,3 +124,62 @@ export function drawAbilityIcon(ctx: Ctx, frame: number, w: number, h: number): 
   }
   addOutline(ctx, w, h, P.outline);
 }
+
+/** Scout drone 16x16 (faces left): 0-1 hover (rotor) | 2 charging (red eye) | 3 wreck (death). */
+export function drawDroneFrame(ctx: Ctx, frame: number, w: number, h: number): void {
+  if (frame === 3) {
+    px(ctx, P.metalDark, 4, 11, 8, 3);
+    px(ctx, P.metal, 5, 10, 5, 2);
+    px(ctx, P.heart, 9, 11, 1, 1);
+    px(ctx, P.metalLight, 3, 13, 2, 1);
+    finish(ctx, w, h);
+    return;
+  }
+  const rotor = frame === 1 ? 1 : 0;
+  px(ctx, P.metalDark, 7, 3, 2, 2);
+  px(ctx, P.metalLight, 2 + rotor, 2, 5, 1);
+  px(ctx, P.metalLight, 9 - rotor, 2, 5, 1);
+  fillEllipse(ctx, 8, 8, 5, 4, P.metal);
+  px(ctx, P.metalLight, 5, 5, 6, 1);
+  px(ctx, P.glow, 10, 6, 3, 1);
+  px(ctx, P.metalDark, 4, 10, 8, 2);
+  px(ctx, P.outline, 3, 7, 5, 3);
+  const eye = frame === 2 ? P.heart : P.glow;
+  px(ctx, eye, 4, 8, 3, 1);
+  if (frame === 2) px(ctx, P.white, 5, 8, 1, 1);
+  px(ctx, P.goldDark, 10, 8, 2, 1);
+  finish(ctx, w, h);
+}
+
+/** Sentinel drone 24x24 (faces left): 0-1 hover | 2 firing (muzzle glow) | 3 wreck (death). */
+export function drawSentinelFrame(ctx: Ctx, frame: number, w: number, h: number): void {
+  if (frame === 3) {
+    fillEllipse(ctx, 12, 19, 7, 3, P.metalDark);
+    px(ctx, P.metal, 7, 16, 8, 3);
+    px(ctx, P.heart, 14, 17, 2, 2);
+    px(ctx, P.metalLight, 4, 20, 3, 1);
+    finish(ctx, w, h);
+    return;
+  }
+  const bob = frame === 1 ? 1 : 0;
+  fillEllipse(ctx, 12, 11 + bob, 9, 6, P.metal);
+  px(ctx, P.metalLight, 6, 6 + bob, 12, 2);
+  px(ctx, P.goldDark, 15, 8 + bob, 5, 6);
+  px(ctx, P.goldLight, 17, 9 + bob, 2, 3);
+  px(ctx, P.metalDark, 5, 14 + bob, 14, 2);
+  px(ctx, P.gold, 4, 11 + bob, 2, 2);
+  px(ctx, P.gold, 18, 11 + bob, 2, 2);
+  // Visor (faces left) and under-slung cannon.
+  px(ctx, P.outline, 4, 9 + bob, 8, 4);
+  px(ctx, frame === 2 ? P.heart : P.glow, 5, 10 + bob, 5, 2);
+  px(ctx, P.metalDark, 2, 16 + bob, 7, 3);
+  px(ctx, P.outline, 1, 17 + bob, 3, 1);
+  if (frame === 2) {
+    px(ctx, P.goldLight, 0, 16 + bob, 2, 3);
+    px(ctx, P.white, 0, 17 + bob, 1, 1);
+  }
+  px(ctx, P.metalDark, 10, 3 + bob, 4, 3);
+  px(ctx, P.metalLight, 6, 3 + bob, 4, 1);
+  px(ctx, P.metalLight, 14, 3 + bob, 4, 1);
+  finish(ctx, w, h);
+}

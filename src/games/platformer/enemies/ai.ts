@@ -20,7 +20,7 @@ export function nextAiState(def: EnemyDef, s: AiSnapshot): AiState {
   if (s.attackTime > 0) return 'attack';
   if (def.attack && s.attackReady && s.distance <= def.attack.range) return 'attack';
   const sees = s.distance <= def.detectRange;
-  if (sees && (def.movement === 'chase' || def.movement === 'fly')) return 'chase';
-  if (def.movement === 'patrol' || def.movement === 'chase') return 'patrol';
+  if (sees && (def.movement === 'chase' || def.movement === 'fly' || def.movement === 'hover')) return 'chase';
+  if (def.movement === 'patrol' || def.movement === 'chase' || def.movement === 'hover') return 'patrol';
   return 'idle';
 }

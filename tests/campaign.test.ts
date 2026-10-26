@@ -63,25 +63,23 @@ describe('campaign.json', () => {
     const prologue = chapters[0];
     expect(prologue).toMatchObject({ status: 'ready', unlock: [], biome: null });
     expect(prologue.levels).toEqual(['forest-1', 'ruins-1', 'ice-1', 'volcano-1']);
-    const registry = readJson('levels/levels.json').levels as string[];
+    const registry = (readJson('levels/levels.json').levels as string[]).filter((f) => !f.includes('/'));
     expect(registry.map((f) => readJson(`levels/${f}`).id)).toEqual(prologue.levels);
   });
 
-  it('prepares the station and alien chapters as planned, with four levels each and no level references', () => {
-    for (const [id, biome] of [['station', 'station'], ['alien', 'alien']]) {
-      const chapter = chapters.find((c) => c.id === id)!;
-      expect(chapter).toMatchObject({ status: 'planned', plannedLevels: 4, levels: [], biome });
-    }
-    expect(chapters[1].unlock).toEqual(['prologue']);
+  it('publishes only episode 1 of the station; the alien chapter stays planned', () => {
+    expect(chapters[1]).toMatchObject({ status: 'ready', levels: ['c1-1-hangar'], biome: 'station' });
+    expect(chapters[1].episodes).toHaveLength(4);
+    expect(chapters[2]).toMatchObject({ status: 'planned', plannedLevels: 4, levels: [], biome: 'alien' });
+    expect(chapters[1].unlock).toEqual([]);
     expect(chapters[2].unlock).toEqual(['station']);
   });
 
   it('planned chapters are never playable', () => {
     const { campaign } = realCampaign();
-    for (const id of ['station', 'alien']) {
-      expect(campaign.isChapterUnlocked(id)).toBe(false);
-      expect(campaign.levelsOf(id)).toEqual([]);
-    }
+    expect(campaign.isChapterUnlocked('alien')).toBe(false);
+    expect(campaign.levelsOf('alien')).toEqual([]);
+    expect(campaign.isChapterUnlocked('station')).toBe(true);
   });
 
   it('rejects invalid chapters instead of breaking the loader', () => {
@@ -208,15 +206,15 @@ describe('desbloqueos y progreso (reglas)', () => {
 });
 
 describe('Prólogo con los niveles reales', () => {
-  it('only the forest is open at the start; each level opens the next', () => {
+  it('the prologue retains its internal progression independently of the station', () => {
     const { campaign } = realCampaign();
-    expect(campaign.availableChapters().map((c) => c.id)).toEqual(['prologue']);
+    expect(campaign.availableChapters().map((c) => c.id)).toEqual(['prologue', 'station']);
     expect(['forest-1', 'ruins-1', 'ice-1', 'volcano-1'].map((id) => campaign.isLevelUnlocked(id))).toEqual([true, false, false, false]);
     campaign.complete('forest-1', { stars: 10, total: 37 });
     expect(campaign.isLevelUnlocked('ruins-1')).toBe(true);
   });
 
-  it('completing the volcano finishes the chapter; the station stays planned', () => {
+  it('completing the volcano finishes the prologue without reporting fictitious unlocks', () => {
     const { campaign } = realCampaign();
     for (const id of ['forest-1', 'ruins-1', 'ice-1']) campaign.complete(id, { stars: 1, total: 10 });
     const last = campaign.complete('volcano-1', { stars: 5, total: 31 });
@@ -225,7 +223,8 @@ describe('Prólogo con los niveles reales', () => {
     expect(campaign.isChapterCompleted('prologue')).toBe(true);
     expect(campaign.progressOf('prologue')).toMatchObject({ completed: 4, total: 4, stars: 8 });
     expect(campaign.progressOf('prologue').starsTotal).toBe(37 + 19 + 23 + 31);
-    expect(campaign.isChapterUnlocked('station')).toBe(false);
+    expect(campaign.isChapterUnlocked('station')).toBe(true);
+    expect(campaign.isLevelUnlocked('c1-1-hangar')).toBe(true);
   });
 
   it('the volcano level still has its boss', () => {
@@ -329,15 +328,17 @@ describe('variantes de bioma', () => {
   const lighting = { vignette: 0.5, overlay: { color: 0x112233, alpha: 0.2, blend: 'add' as const } };
   const withVariants = (variants: NonNullable<typeof ICE_DEFINITION.variants>) => createBiome({ ...ICE_DEFINITION, id: 'frost', variants });
 
-  it('the four current biomes keep their ids, texture keys and have no variants', () => {
-    expect(Object.keys(BIOMES).sort()).toEqual(['forest', 'ice', 'ruins', 'volcano']);
-    for (const biome of Object.values(BIOMES)) {
-      expect(biome).toMatchObject({ baseId: biome.id, variant: null, variants: {} });
-      expect(biome.tileset).toBe(`platformer.biome.${biome.id}.tiles`);
+  it('the four original biomes keep their ids, texture keys and have no variants', () => {
+    const originals = ['forest', 'ice', 'ruins', 'volcano'];
+    expect(Object.keys(BIOMES).sort()).toEqual([...originals, 'station'].sort());
+    for (const id of originals) {
+      const biome = BIOMES[id];
+      expect(biome).toMatchObject({ baseId: id, variant: null, variants: {} });
+      expect(biome.tileset).toBe(`platformer.biome.${id}.tiles`);
       expect(biome.assets).toHaveLength(9);
+      expect(BIOME_VARIANTS[id]).toEqual([]);
     }
-    expect(BIOME_THEMES).toHaveLength(4);
-    expect(Object.values(BIOME_VARIANTS).every((v) => v.length === 0)).toBe(true);
+    expect(BIOME_THEMES).toHaveLength(4 + 1 + 4);
     expect(getBiome('ice')).toBe(BIOMES.ice);
   });
 
@@ -463,9 +464,9 @@ describe('selección y navegación', () => {
     const [prologue, station, alien] = chapterCards(campaign, name);
     expect(prologue).toMatchObject({ id: 'prologue', name: 'Prologo', biome: 'Varios', levels: '0/4', stars: '0/110', stateLabel: 'Disponible', selectable: true });
     expect(prologue.description).not.toBe('');
-    expect(station).toMatchObject({ stateLabel: 'Proximamente', selectable: false, levels: '0/4', status: 'planned', biome: 'station' });
+    expect(station).toMatchObject({ stateLabel: 'Disponible', selectable: true, levels: '0/4', status: 'ready', biome: 'Estacion espacial' });
     expect(alien).toMatchObject({ stateLabel: 'Proximamente', selectable: false });
-    expect(station.requires).toEqual(['Prologo']);
+    expect(station.requires).toEqual([]);
     for (const id of ['forest-1', 'ruins-1', 'ice-1', 'volcano-1']) campaign.complete(id, { stars: 1, total: 1 });
     const done = chapterCards(campaign, name)[0];
     expect(done).toMatchObject({ stateLabel: 'Completado', levels: '4/4', stars: '4/110', completed: true });
@@ -482,14 +483,20 @@ describe('selección y navegación', () => {
       [4, 'volcano-1', false, false],
     ]);
     expect(cards[0]).toMatchObject({ stars: 7, starsTotal: 37, biome: 'forest' });
-    expect(levelCards(campaign, 'station')).toEqual([]);
+    const station = levelCards(campaign, 'station');
+    expect(station.map((c) => [c.position, c.id, c.planned, c.unlocked])).toEqual([
+      [1, 'c1-1-hangar', false, true],
+      [2, 'c1-2-corridors', true, false],
+      [3, 'c1-3-reactor', true, false],
+      [4, 'c1-4-omega', true, false],
+    ]);
   });
 
   it('opens the right chapter by default and ignores unusable ones', () => {
     const { campaign } = realCampaign();
-    expect(defaultChapterId(campaign)).toBe('prologue');
-    expect(defaultChapterId(campaign, 'station')).toBe('prologue');
-    expect(defaultChapterId(campaign, 'nope')).toBe('prologue');
+    expect(defaultChapterId(campaign)).toBe('station');
+    expect(defaultChapterId(campaign, 'station')).toBe('station');
+    expect(defaultChapterId(campaign, 'nope')).toBe('station');
     campaign.lastChapterId = 'prologue';
     expect(defaultChapterId(campaign, null)).toBe('prologue');
   });
@@ -504,6 +511,8 @@ describe('selección y navegación', () => {
 
     const chapters = read('scenes/PlatformerChapterSelectScene.ts');
     const levels = read('scenes/PlatformerLevelSelectScene.ts');
+    expect(chapters).not.toMatch(/DEV: HANGAR|PROBAR HANGAR|keydown-H/);
+    expect(read('level/levelLoader.ts')).not.toMatch(/developmentOnly|import\.meta\.env|__APP_ENV__/);
     for (const scene of [chapters, levels]) {
       for (const key of ['LEFT', 'RIGHT', 'UP', 'DOWN']) expect(scene).toContain(`'${key}'`);
       for (const key of ['keydown-ENTER', 'keydown-SPACE', 'keydown-ESC', 'keydown-T']) expect(scene).toContain(key);

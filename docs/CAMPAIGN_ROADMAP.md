@@ -111,6 +111,60 @@ inexistentes. `getBiome(id, variant)` resuelve el tema y `BIOME_THEMES` lista ba
 
 **Una variante de bioma**: añade una entrada en `variants` del bioma (0.4) y úsala con `"variant"` en los niveles.
 
+### 0.6b Capítulo 1: La estación fantasma (Hangar disponible desde el inicio)
+
+Campaña: **MiniVerse — La última señal** (`campaign` en `campaign.json`: título, sinopsis, protagonista y reparto:
+PIEZOD, LUMA, NÉXAR, OMEGA-7). El capítulo `station` publica solo `c1-1-hangar`;
+los episodios 2, 3 y 4 siguen como metadatos, sin archivos ni enemigos de jefe implementados.
+Prólogo y capítulo 1 están disponibles desde una partida nueva, sin requisitos entre ellos y con el mismo
+acceso en local, staging y producción. El capítulo declara cuatro **episodios**:
+
+| Episodio (id del futuro nivel) | Título | Variante | Notas |
+| --- | --- | --- | --- |
+| `c1-1-hangar` | Despertar en el Hangar | `hangar` | implementado; disponible desde el selector normal |
+| `c1-2-corridors` | Pasillos de seguridad | `corridors` | comparte texturas; partículas e iluminación propias |
+| `c1-3-reactor` | El reactor inestable | `reactor` | paleta verde/ámbar, texturas propias |
+| `c1-4-omega` | Protocolo OMEGA | `boss` | jefe `omega-7` (aún no existe en `enemies.json`) |
+
+- `episodes` es metadato: `id` (el id que tendrá el nivel), `title`, `summary`, `variant` y `boss` opcionales. En un
+  capítulo `planned` no se carga ningún nivel; `plannedLevels` debe coincidir con el número de episodios.
+- Se valida que las variantes existan en el bioma del capítulo, que los ids de episodio no se repitan ni choquen con
+  niveles registrados, y, al pasar a jugable, que `levels` sea un prefijo de `episodes` en orden, que el nivel use la
+  variante declarada y que el jefe sea un enemigo con `boss: true`.
+- `CampaignManager.episodesOf(capítulo)` devuelve cada episodio con su nivel, si es jugable y si está completado
+  (hoy: solo Hangar). `CampaignManager.meta` expone los metadatos de campaña.
+- El bioma `station` y sus cuatro variantes están en `biomes/definitions/station.ts` (arte procedural provisional;
+  carpetas `public/assets/platformer/biomes/station/*` listas para PNG vía `files`).
+
+**Hangar recuperado (`feature/level-objects`)**
+- `levels/chapter1/01-hangar.json`: seis secciones, 380 x 24 tiles, 27 estrellas, dos checkpoints y nueve drones.
+- Tres plataformas móviles, tres láseres cíclicos, un suelo eléctrico, un interruptor y dos puertas enlazadas.
+- Dron explorador: 1 de vida, velocidad 56, patrulla de 28 px y embestida de 132 px/s tras 0.65 s de aviso.
+- Centinela: 3 de vida (sin aumento), velocidad 22, distancia preferida de 96 px y disparo de 82 px/s;
+  avisa 0.8 s y recarga durante 3.2 s. Los drones fijan el objetivo al comenzar el aviso, sin perseguirlo durante el ataque.
+- Encuentros por sección: explorador aislado; dos exploradores separados; un explorador sobre apoyo firme entre
+  plataformas; centinela junto al suelo eléctrico; explorador y centinela entre contenedores; mixto final breve.
+- Descanso antes de la terminal, fuera del alcance combinado de patrulla, persecución y disparo de los enemigos finales.
+- Ambientación: evacuación incompleta, cápsulas vacías, seguridad alterada por invasores y transmisión fragmentada
+  antes del final. Los mensajes ambientales son de una frase y no bloquean el juego.
+- Arte provisional: alarmas, consolas, cápsulas, contenedores, paneles y tecnología alienígena en el atlas existente;
+  sin colisiones, shaders ni dependencias nuevas. Los frames originales mantienen sus índices; la hoja completa
+  tiene ahora 22 frames de 16 x 16 y sigue admitiendo sustitución mediante `files.decorations`.
+- Los avisos se apartan del jugador entre los bordes superior e inferior; la terminal conserva su panel pausado.
+- LUMA presenta el despertar y las zonas. La terminal reproduce la transmisión y pausa la acción hasta terminar;
+  tiene prioridad sobre mensajes ambientales y puede avanzarse con Enter, Espacio o toque.
+- Se reutilizan rayo de energía, lanzallamas y cañón láser cargable; no se conceden compras ni armas automáticamente.
+- Acceso: Aventuras Pixel -> La estación fantasma -> Despertar en el Hangar, usando la selección normal.
+  No existen atajos especiales ni filtros por entorno para el Hangar.
+- El prólogo conserva sus cuatro niveles y progresión interna. No se completa ningún nivel automáticamente,
+  no se conceden compras o recompensas y no se modifican partidas guardadas para abrir el capítulo 1.
+- El equipamiento inicial se conserva sin compras; el nivel es alcanzable sin habilidades y los drones
+  pueden vencerse saltando sobre ellos. Las armas ya adquiridas siguen funcionando.
+- Completar Hangar persiste sus estrellas, pero no completa el capítulo (1/4), no abre episodios ausentes ni el capítulo 2.
+- `tests/chapter1.test.ts` cubre contenido real, narrativa, drones, acceso uniforme, progresión y compatibilidad del prólogo.
+
+La implementación de más episodios queda fuera de esta fase.
+
 ### 0.7 Pendiente de esta fase
 
 - Aplicar las recompensas de capítulo al perfil (hoy solo se declaran y se consultan con `earnedRewards()`).

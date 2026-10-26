@@ -24,6 +24,8 @@ export const ENEMY_SPRITES: Readonly<Record<string, EnemySpriteDef>> = {
     frameRate: 4,
     anims: { move: [0, 1], attack: [2], death: [3] },
   },
+  drone: { texture: TEX.drone, body: { width: 10, height: 8, offsetX: 3, offsetY: 5 }, facesLeft: true, frameRate: 12, anims: { move: [0, 1], attack: [2], death: [3] } },
+  sentinel: { texture: TEX.sentinel, body: { width: 16, height: 12, offsetX: 4, offsetY: 5 }, facesLeft: true, frameRate: 6, anims: { move: [0, 1], attack: [2], death: [3] } },
   spitter: { texture: TEX.spitter, body: { width: 10, height: 10, offsetX: 3, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0], attack: [1], death: [2] } },
 };
 

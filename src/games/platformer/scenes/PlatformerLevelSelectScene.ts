@@ -79,7 +79,9 @@ export class PlatformerLevelSelectScene extends Phaser.Scene {
     pixelText(this, x, top + 15, String(entry.position), unlocked ? 0xffffff : 0x7a7caa, 3).setOrigin(0.5);
     pixelText(this, x, top + 38, entry.name, unlocked ? 0xfff8ec : 0x7a7caa).setMaxWidth(CARD_W - 8).setCenterAlign().setOrigin(0.5, 0);
 
-    if (!entry.valid) {
+    if (entry.planned) {
+      pixelText(this, x, top + CARD_H - 12, 'Proximamente', 0x9a86c4).setOrigin(0.5);
+    } else if (!entry.valid) {
       pixelText(this, x, top + CARD_H - 12, 'Error', hex(PALETTE.heart)).setOrigin(0.5);
     } else if (!unlocked) {
       this.drawLock(x, top + CARD_H - 14);

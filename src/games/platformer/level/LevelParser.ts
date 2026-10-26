@@ -36,6 +36,8 @@ export interface LevelData {
   enemies?: Readonly<Record<string, string>>;
   /** Interactive objects (moving platforms, lasers, switches, doors...). Validated by objects/validate.ts. */
   objects?: unknown;
+  /** Dialogue and narrative beats (story/validate.ts). */
+  story?: unknown;
 }
 
 export const DEFAULT_ENEMY_LEGEND: Readonly<Record<string, string>> = { E: 'walker' };

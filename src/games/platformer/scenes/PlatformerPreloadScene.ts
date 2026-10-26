@@ -46,7 +46,7 @@ export class PlatformerPreloadScene extends Phaser.Scene {
     registerAnimations(this.anims, PROJECTILE_ANIMS);
     const data = buildGameData(this);
     buildLevelManager(this, data.enemies.enemies);
-    buildCampaignManager(this, data.abilities.abilities);
+    buildCampaignManager(this, data.abilities.abilities, data.enemies.enemies);
     this.scene.start(PlatformerScenes.ChapterSelect);
   }
 }

@@ -166,7 +166,7 @@ describe('integración con el validador de niveles', () => {
   });
 
   it('los cuatro niveles originales siguen válidos y sin objetos', () => {
-    for (const file of readJson('levels/levels.json').levels as string[]) {
+    for (const file of (readJson('levels/levels.json').levels as string[]).filter((f) => !f.includes('/'))) {
       const raw = readJson(`levels/${file}`);
       expect(raw.objects, file).toBeUndefined();
       const result = run(raw);

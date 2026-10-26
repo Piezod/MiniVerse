@@ -1,4 +1,16 @@
 {
+  "campaign": {
+    "id": "the-last-signal",
+    "title": "MiniVerse — La última señal",
+    "synopsis": "PIEZOD despierta en una estación espacial aparentemente abandonada. Una especie alienígena, los NÉXAR, ha secuestrado a los humanos. Con la ayuda de LUMA, investigará la estación y liberará a los cautivos.",
+    "protagonist": "piezod",
+    "characters": {
+      "piezod": { "name": "PIEZOD", "role": "protagonista", "description": "Superhéroe de armadura roja y dorada con visor azul" },
+      "luma": { "name": "LUMA", "role": "aliada", "description": "Inteligencia artificial que guía a PIEZOD durante la investigación" },
+      "nexar": { "name": "NÉXAR", "role": "antagonistas", "description": "Especie alienígena que ha secuestrado a los humanos" },
+      "omega-7": { "name": "OMEGA-7", "role": "jefe", "description": "Robot de seguridad de la estación; combate en tres fases" }
+    }
+  },
   "chapters": [
     {
       "id": "prologue",
@@ -12,15 +24,19 @@
     },
     {
       "id": "station",
-      "name": "Estacion espacial abandonada",
-      "description": "Hangares y reactores a la deriva. Un guardian protege la sala de control",
+      "name": "La estación fantasma",
+      "description": "PIEZOD despierta en una estación sin vida. LUMA le guía: los NÉXAR se llevaron a la tripulación",
       "order": 1,
-      "planned": true,
-      "plannedLevels": 4,
       "biome": "station",
-      "levels": [],
-      "unlock": { "chapters": ["prologue"] },
-      "rewards": { "abilities": [] }
+      "levels": ["c1-1-hangar"],
+      "unlock": null,
+      "rewards": { "abilities": [] },
+      "episodes": [
+        { "id": "c1-1-hangar", "title": "Despertar en el Hangar", "summary": "PIEZOD despierta solo entre naves aparcadas. LUMA le ayuda a orientarse.", "variant": "hangar" },
+        { "id": "c1-2-corridors", "title": "Pasillos de seguridad", "summary": "Puertas, interruptores y láseres de seguridad bloquean el camino al reactor.", "variant": "corridors" },
+        { "id": "c1-3-reactor", "title": "El reactor inestable", "summary": "Descargas y plataformas móviles sobre un núcleo a punto de ceder.", "variant": "reactor" },
+        { "id": "c1-4-omega", "title": "Protocolo OMEGA", "summary": "OMEGA-7 protege la sala de control. Jefe final del capítulo, en tres fases.", "variant": "boss", "boss": "omega-7" }
+      ]
     },
     {
       "id": "alien",

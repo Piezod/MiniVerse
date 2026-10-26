@@ -69,6 +69,7 @@ export interface BiomeDefinition {
   palette: BiomePalette;
   style: BiomeStyle;
   decorations: BiomeDecoration[];
+  sign?: DecoType;
   decorationDensity?: { top: number; bottom: number };
   ambient: BiomeAmbient[];
   lighting: BiomeLighting;
@@ -191,7 +192,7 @@ function buildTheme(base: BiomeDefinition, source: BiomeDefinition, variantId: s
     backgroundColor: source.palette.sky[0][1],
     tileset: key('tiles'),
     decorations: key('decorations'),
-    signFrame: DECO.sign,
+    signFrame: DECO[source.sign ?? 'sign'],
     assets: [
       image('tiles', TILESET.width, TILESET.height, tilesetDrawer(tiles.p, tiles.s, origin('tiles').seed ?? 11)),
       {
