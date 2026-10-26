@@ -6,13 +6,22 @@ import type { Player } from '../entities/Player';
 import type { EnemyDef } from '../enemies/EnemyCatalog';
 import { DEPTH } from '../view/ParallaxBackground';
 import type { PlatformerFx } from '../view/PlatformerFx';
-import type { DamageType, Hit } from './damage';
+import { beamTargets } from './beam';
+import type { EffectApplication, Hit } from './damage';
+import type { ElementChart } from './elements';
+import type { StatusDef } from './status';
 
 type OverlapTarget = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
 
 export interface CombatCallbacks {
-  damagePlayer(amount: number, fromX: number): void;
+  /** Every hit on the player: contact (form 'contact') or enemy projectiles (form 'projectile'). */
+  damagePlayer(hit: Hit & { fromX: number }): void;
   enemyKilled(enemy: Enemy): void;
+}
+
+export interface CombatRules {
+  chart: ElementChart;
+  statusCatalog: Readonly<Record<string, StatusDef>>;
 }
 
 export interface PlayerShot {
@@ -20,7 +29,8 @@ export interface PlayerShot {
   y: number;
   vx: number;
   damage: number;
-  type: DamageType;
+  element: string | null;
+  effects?: readonly EffectApplication[];
   range: number;
 }
 
@@ -36,6 +46,8 @@ export class CombatSystem implements EnemyHost {
   private readonly playerShots: Phaser.Physics.Arcade.Group;
   private readonly enemyShots: Phaser.Physics.Arcade.Group;
   private lastStomp = -Infinity;
+  readonly chart: ElementChart;
+  readonly statusCatalog: Readonly<Record<string, StatusDef>>;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -43,7 +55,10 @@ export class CombatSystem implements EnemyHost {
     private readonly player: Player,
     private readonly fx: PlatformerFx,
     private readonly callbacks: CombatCallbacks,
+    rules: CombatRules,
   ) {
+    this.chart = rules.chart;
+    this.statusCatalog = rules.statusCatalog;
     this.enemies = scene.add.group({ runChildUpdate: true });
     this.playerShots = scene.physics.add.group({ allowGravity: false });
     this.enemyShots = scene.physics.add.group({ allowGravity: false });
@@ -73,7 +88,7 @@ export class CombatSystem implements EnemyHost {
 
   enemyShoot(enemy: Enemy, vx: number, vy: number, damage: number): void {
     const shot = this.enemyShots.create(enemy.x + Math.sign(vx) * 6, enemy.y - enemy.displayHeight / 2, TEX.projectiles, PROJECTILE_FRAME.fireball) as Phaser.Physics.Arcade.Sprite;
-    shot.setDepth(DEPTH.enemies).setData('damage', damage).setData('startX', shot.x).setData('range', 400);
+    shot.setDepth(DEPTH.enemies).setData('damage', damage).setData('element', enemy.def.attack?.element ?? enemy.def.element).setData('startX', shot.x).setData('range', 400);
     shot.play('platformer.projectile.fireball');
     shot.body!.setSize(6, 6);
     shot.setVelocity(vx, vy);
@@ -88,10 +103,33 @@ export class CombatSystem implements EnemyHost {
   firePlayerShot(shot: PlayerShot): void {
     const sprite = this.playerShots.create(shot.x, shot.y, TEX.projectiles, PROJECTILE_FRAME.beam) as Phaser.Physics.Arcade.Sprite;
     sprite.setDepth(DEPTH.particles).setFlipX(shot.vx < 0).setBlendMode(Phaser.BlendModes.ADD);
-    sprite.setData('hit', { amount: shot.damage, type: shot.type } satisfies Hit).setData('startX', shot.x).setData('range', shot.range);
+    const hit: Hit = { amount: shot.damage, form: 'projectile', element: shot.element, effects: shot.effects };
+    sprite.setData('hit', hit).setData('startX', shot.x).setData('range', shot.range);
     sprite.play('platformer.projectile.beam');
     sprite.body!.setSize(8, 8);
     sprite.setVelocityX(shot.vx);
+  }
+
+  /**
+   * Instant horizontal beam: stops at solid terrain and damages up to `pierce` enemies, nearest first.
+   * Every enemy goes through applyHit, so affinities, resistances, guard and armor apply.
+   */
+  fireBeam(beam: { x: number; y: number; dir: -1 | 1; range: number; height: number; pierce: number; hit: Hit }): { endX: number; hits: number } {
+    let endX = beam.x;
+    for (let d = 0; d < beam.range; d += 4) {
+      const tile = this.terrain.getTileAtWorldXY(beam.x + beam.dir * (d + 4), beam.y);
+      if (tile && (tile.collideLeft || tile.collideRight)) break;
+      endX = beam.x + beam.dir * Math.min(d + 4, beam.range);
+    }
+    const area = new Phaser.Geom.Rectangle(Math.min(beam.x, endX), beam.y - beam.height / 2, Math.abs(endX - beam.x), beam.height);
+    const inBeam = (this.enemies.getChildren() as Enemy[]).filter((e) => e.isAlive && Phaser.Geom.Intersects.RectangleToRectangle(area, new Phaser.Geom.Rectangle(e.body.x, e.body.y, e.body.width, e.body.height)));
+    const targets = beamTargets(beam.x, inBeam, beam.pierce);
+    for (const enemy of targets) {
+      const result = enemy.applyHit({ ...beam.hit, fromX: beam.x });
+      this.fx.impact(enemy.x, beam.y, 'beam');
+      playSound(this.scene, result.damage > 0 ? AUDIO.enemyHit : AUDIO.clank);
+    }
+    return { endX, hits: targets.length };
   }
 
   /** Damages every live enemy overlapping the area (used by melee/area abilities). Returns enemies hit. */
@@ -137,7 +175,7 @@ export class CombatSystem implements EnemyHost {
         enemy.kill();
         playSound(this.scene, AUDIO.stomp);
       } else if (rule === 'damage') {
-        enemy.applyHit({ amount: enemy.def.stompDamage, type: 'stomp', fromX: this.player.x });
+        enemy.applyHit({ amount: enemy.def.stompDamage, form: 'stomp', fromX: this.player.x });
         playSound(this.scene, AUDIO.enemyHit);
       } else {
         this.fx.impact(this.player.x, body.bottom, 'beam');
@@ -146,7 +184,9 @@ export class CombatSystem implements EnemyHost {
       return;
     }
     if (this.scene.time.now - this.lastStomp < STOMP_GRACE_MS) return;
-    if (!this.player.isInvulnerable && enemy.def.contactDamage > 0) this.callbacks.damagePlayer(enemy.def.contactDamage, enemy.x);
+    if (!this.player.isInvulnerable && enemy.def.contactDamage > 0) {
+      this.callbacks.damagePlayer({ amount: enemy.def.contactDamage, form: 'contact', element: enemy.def.element, fromX: enemy.x });
+    }
   }
 
   private onShotHitsEnemy(shotObj: OverlapTarget, enemyObj: OverlapTarget): void {
@@ -162,7 +202,9 @@ export class CombatSystem implements EnemyHost {
   private onShotHitsPlayer(_player: OverlapTarget, shotObj: OverlapTarget): void {
     const shot = shotObj as Phaser.Physics.Arcade.Sprite;
     if (!shot.active) return;
-    if (!this.player.isInvulnerable) this.callbacks.damagePlayer(shot.getData('damage') as number, shot.x);
+    if (!this.player.isInvulnerable) {
+      this.callbacks.damagePlayer({ amount: shot.getData('damage') as number, form: 'projectile', element: shot.getData('element') as string | null, fromX: shot.x });
+    }
     this.popShot(shot);
   }
 }

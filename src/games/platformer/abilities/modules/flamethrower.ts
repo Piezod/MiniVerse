@@ -21,6 +21,11 @@ export const flamethrower: AbilityModule = (ctx, def, level, stats) => {
   let held = 0;
   let tickLeft = 0;
   let soundLeft = 0;
+  let burning = false;
+  /** Set when the tank runs dry; the button must be released before igniting again. */
+  let exhausted = false;
+  /** Energy needed to ignite (0.25 s worth), so an empty tank can't sputter on regeneration. */
+  const ignition = stats.energy * 0.25;
 
   return {
     def,
@@ -29,11 +34,17 @@ export const flamethrower: AbilityModule = (ctx, def, level, stats) => {
     update(dt, isHeld) {
       cooldown.update(dt);
       const { player, energy, combat, fx } = ctx;
-      if (!isHeld || !player.isAlive || !cooldown.ready || energy.drain(stats.energy * dt) <= 0) {
+      if (!isHeld) exhausted = false;
+      if (exhausted || (!burning && energy.current < ignition)) isHeld = false;
+      const needed = stats.energy * dt;
+      if (!isHeld || !player.isAlive || !cooldown.ready || energy.drain(needed) < needed) {
+        if (isHeld && burning) exhausted = true;
+        burning = false;
         held = 0;
         tickLeft = 0;
         return;
       }
+      burning = true;
       held += dt;
       tickLeft -= dt;
       const dir = player.facing as -1 | 1;
@@ -49,7 +60,7 @@ export const flamethrower: AbilityModule = (ctx, def, level, stats) => {
       if (tickLeft > 0) return;
       tickLeft = tick;
       const area = new Phaser.Geom.Rectangle(dir > 0 ? mouthX : mouthX - range, y - height / 2, range, height);
-      combat.damageArea(area, { amount: flameTickDamage(held, base, ramp, max), type: 'fire', fromX: player.x });
+      combat.damageArea(area, { amount: flameTickDamage(held, base, ramp, max), form: 'area', element: def.element, effects: stats.effects, fromX: player.x });
     },
   };
 };

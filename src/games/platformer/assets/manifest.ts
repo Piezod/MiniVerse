@@ -65,6 +65,7 @@ export const AUDIO = {
   checkpoint: { kind: 'audio', key: 'platformer.sfx.checkpoint', credit: SYNTH, fallbackTone: { wave: 'sine', from: 523, to: 1046, duration: 0.25, volume: 0.15 } },
   victory: { kind: 'audio', key: 'platformer.sfx.victory', credit: SYNTH, fallbackTone: { wave: 'square', from: 523, to: 1568, duration: 0.5, volume: 0.06 } },
   beam: { kind: 'audio', key: 'platformer.sfx.beam', credit: SYNTH, fallbackTone: { wave: 'sawtooth', from: 1200, to: 400, duration: 0.12, volume: 0.05 } },
+  laser: { kind: 'audio', key: 'platformer.sfx.laser', credit: SYNTH, fallbackTone: { wave: 'sawtooth', from: 1600, to: 200, duration: 0.3, volume: 0.07 } },
   flame: { kind: 'audio', key: 'platformer.sfx.flame', credit: SYNTH, fallbackTone: { wave: 'triangle', from: 120, to: 90, duration: 0.12, volume: 0.12 } },
   enemyHit: { kind: 'audio', key: 'platformer.sfx.enemy-hit', credit: SYNTH, fallbackTone: { wave: 'square', from: 220, to: 150, duration: 0.08, volume: 0.08 } },
   enemyShoot: { kind: 'audio', key: 'platformer.sfx.enemy-shoot', credit: SYNTH, fallbackTone: { wave: 'triangle', from: 500, to: 250, duration: 0.15, volume: 0.1 } },

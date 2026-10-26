@@ -2,6 +2,7 @@
   "walker": {
     "name": "Musgobot",
     "sprite": "walker",
+    "element": "energy",
     "maxHealth": 1,
     "contactDamage": 1,
     "speed": 28,
@@ -26,16 +27,18 @@
   "shellbot": {
     "extends": "walker",
     "name": "Acorazado",
+    "element": "plasma",
     "maxHealth": 2,
     "speed": 32,
     "stomp": "damage",
     "tint": "#8fd8ff",
-    "resist": { "beam": 0.5 },
+    "resist": { "energy": 0.5 },
     "reward": { "energy": 20 }
   },
   "bat": {
     "name": "Murcielago",
     "sprite": "bat",
+    "element": "plasma",
     "maxHealth": 1,
     "contactDamage": 1,
     "speed": 42,
@@ -47,15 +50,18 @@
   "bat-frost": {
     "extends": "bat",
     "name": "Murcielago de escarcha",
+    "element": "cryo",
     "maxHealth": 2,
     "speed": 50,
     "stomp": "damage",
     "tint": "#b8f4ff",
-    "resist": { "fire": 2 }
+    "resist": { "fire": 2 },
+    "statusImmune": ["chill"]
   },
   "spitter": {
     "name": "Escupefuego",
     "sprite": "spitter",
+    "element": "fire",
     "maxHealth": 2,
     "contactDamage": 1,
     "speed": 0,
@@ -68,6 +74,7 @@
   "golem": {
     "name": "Golem",
     "sprite": "golem",
+    "element": "energy",
     "maxHealth": 4,
     "contactDamage": 1,
     "speed": 18,
@@ -80,6 +87,7 @@
   "magma-king": {
     "extends": "golem",
     "name": "Rey de Magma",
+    "element": "fire",
     "maxHealth": 8,
     "scale": 2,
     "speed": 26,

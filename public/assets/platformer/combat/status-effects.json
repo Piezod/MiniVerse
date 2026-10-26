@@ -1,0 +1,56 @@
+{
+  "burn": {
+    "name": "Quemadura",
+    "kind": "dot",
+    "element": "fire",
+    "duration": 2,
+    "maxDuration": 2,
+    "tick": 0.5,
+    "intensity": 0.25,
+    "stacking": "intensity",
+    "maxStacks": 3,
+    "blockedBy": ["fire"],
+    "tint": "#ff9a4d"
+  },
+  "chill": {
+    "name": "Ralentizacion",
+    "kind": "slow",
+    "duration": 2,
+    "maxDuration": 4,
+    "intensity": 0.5,
+    "stacking": "extend",
+    "blockedBy": ["cryo"],
+    "tint": "#9fe8ff"
+  },
+  "freeze": {
+    "name": "Congelacion",
+    "kind": "stun",
+    "duration": 1,
+    "maxDuration": 1,
+    "stacking": "ignore",
+    "blockedBy": ["cryo", "fire"],
+    "tint": "#d8f8ff"
+  },
+  "overload": {
+    "name": "Sobrecarga",
+    "kind": "vulnerable",
+    "duration": 3,
+    "maxDuration": 3,
+    "intensity": 1.25,
+    "stacking": "refresh",
+    "blockedBy": ["energy"],
+    "tint": "#fff17a"
+  },
+  "plasma-residue": {
+    "name": "Residuo de plasma",
+    "kind": "dot",
+    "element": "plasma",
+    "duration": 3,
+    "maxDuration": 6,
+    "tick": 1,
+    "intensity": 0.5,
+    "stacking": "extend",
+    "blockedBy": ["plasma"],
+    "tint": "#d98bff"
+  }
+}

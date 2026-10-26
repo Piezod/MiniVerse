@@ -4,6 +4,9 @@
   "biome": "ruins",
   "height": 14,
   "enemies": { "E": "walker-fast", "H": "hopper", "A": "shellbot" },
+  "signs": {
+    "1": { "keyboard": "Tienda: F rayo  R llamas", "touch": "Tienda: botones de poder" }
+  },
   "sections": [
     {
       "name": "Entrada",
@@ -11,7 +14,7 @@
         "..............SSS",
         ".............XXXXX",
         "......SS",
-        "..P...XX.......E........",
+        "..P.1.XX.......E........",
         "########################",
         "########################"
       ]

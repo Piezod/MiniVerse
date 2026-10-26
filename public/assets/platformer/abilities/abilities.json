@@ -17,6 +17,8 @@
     "description": "Disparo horizontal de energia",
     "module": "projectile",
     "slot": "active",
+    "element": "energy",
+    "defaultSlot": "primary",
     "icon": 1,
     "requires": null,
     "levels": [
@@ -31,12 +33,68 @@
     "description": "Llamas cercanas: mas dano cuanto mas tiempo",
     "module": "flamethrower",
     "slot": "active",
+    "element": "fire",
+    "defaultSlot": "secondary",
     "icon": 2,
     "requires": "ruins-1",
     "levels": [
-      { "cost": 20, "energy": 40, "cooldown": 0, "params": { "range": 34, "height": 14, "tick": 0.12, "baseDamage": 0.2, "rampPerSecond": 0.6, "maxDamage": 0.8 } },
-      { "cost": 35, "energy": 32, "cooldown": 0, "params": { "range": 44, "height": 16, "tick": 0.1, "baseDamage": 0.3, "rampPerSecond": 0.8, "maxDamage": 1.2 } }
+      {
+        "cost": 20, "energy": 40, "cooldown": 0,
+        "params": { "range": 34, "height": 14, "tick": 0.12, "baseDamage": 0.2, "rampPerSecond": 0.6, "maxDamage": 0.8 },
+        "effects": [{ "id": "burn", "chance": 0.15 }]
+      },
+      {
+        "cost": 35, "energy": 32, "cooldown": 0,
+        "params": { "range": 44, "height": 16, "tick": 0.1, "baseDamage": 0.3, "rampPerSecond": 0.8, "maxDamage": 1.2 },
+        "effects": [{ "id": "burn", "chance": 0.25 }]
+      }
     ],
     "assets": { "icon": 2, "fx": "flame", "anim": "shoot" }
+  },
+  "laser-cannon": {
+    "name": "Canon laser",
+    "description": "Manten para cargar: rayo penetrante",
+    "module": "charged-shot",
+    "slot": "active",
+    "element": "laser",
+    "defaultSlot": "primary",
+    "icon": 1,
+    "requires": "ice-1",
+    "levels": [
+      { "cost": 25, "energy": 30, "cooldown": 0.9, "params": { "damage": 1, "chargedDamage": 2.5, "chargeTime": 1.2, "range": 200, "pierce": 2, "beamHeight": 4 } },
+      { "cost": 35, "energy": 26, "cooldown": 0.8, "params": { "damage": 1.25, "chargedDamage": 3.5, "chargeTime": 1, "range": 230, "pierce": 3, "beamHeight": 4 } },
+      { "cost": 45, "energy": 22, "cooldown": 0.7, "params": { "damage": 1.5, "chargedDamage": 4.5, "chargeTime": 0.9, "range": 260, "pierce": 4, "beamHeight": 5 } }
+    ],
+    "assets": { "icon": 1, "color": "#ff4d6d", "anim": "shoot" }
+  },
+  "cryo-cannon": {
+    "name": "Canon criogenico",
+    "description": "Rafaga helada que ralentiza y puede congelar",
+    "module": "cryo-spray",
+    "slot": "active",
+    "available": false,
+    "element": "cryo",
+    "defaultSlot": "secondary",
+    "icon": 2,
+    "requires": null,
+    "levels": [
+      { "cost": 25, "energy": 20, "cooldown": 0.5, "params": { "damage": 0.75, "range": 120, "speed": 200 }, "effects": [{ "id": "chill" }, { "id": "freeze", "chance": 0.1 }] }
+    ],
+    "assets": { "icon": 2, "projectile": "beam", "anim": "shoot" }
+  },
+  "plasma-projector": {
+    "name": "Proyector de plasma",
+    "description": "Bolas de plasma que dejan dano residual",
+    "module": "plasma-projector",
+    "slot": "active",
+    "available": false,
+    "element": "plasma",
+    "defaultSlot": "secondary",
+    "icon": 2,
+    "requires": null,
+    "levels": [
+      { "cost": 25, "energy": 22, "cooldown": 0.6, "params": { "damage": 1, "range": 140, "speed": 180 }, "effects": [{ "id": "plasma-residue" }] }
+    ],
+    "assets": { "icon": 2, "projectile": "beam", "anim": "shoot" }
   }
 }

@@ -23,6 +23,8 @@ export interface AbilityInstance {
   readonly cooldown: Cooldown;
   /** `held`/`pressed` refer to the ability's slot button (always false for passives). */
   update(dt: number, held: boolean, pressed: boolean): void;
+  /** Aborts any charge in progress without side effects (pause, death, focus loss, scene change). */
+  cancel?(): void;
 }
 
 /** A module turns a configured ability level into a runtime instance. */
