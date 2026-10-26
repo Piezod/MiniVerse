@@ -1,0 +1,120 @@
+import type { Terrain } from './tileset';
+
+export interface TilePoint {
+  col: number;
+  row: number;
+}
+
+export interface SignText {
+  keyboard: string;
+  touch: string;
+}
+
+export interface LevelSection {
+  name?: string;
+  rows: readonly string[];
+}
+
+/**
+ * Level file format (JSON). Sections are concatenated left to right; inside a section, rows are
+ * aligned to the bottom of the level and short rows are padded with '.'.
+ *   .  empty        #  ground                          X  block         =  one-way platform
+ *   P  player       S  star                            E  walker enemy  K  checkpoint
+ *   O  exit portal  1-9 sign (text in `signs`)
+ */
+export interface LevelData {
+  id: string;
+  name: string;
+  /** Visual ambience id (see biomes/index.ts). */
+  biome: string;
+  height: number;
+  sections: readonly LevelSection[];
+  signs?: Readonly<Record<string, SignText>>;
+}
+
+export interface ParsedLevel {
+  id: string;
+  biome: string;
+  width: number;
+  height: number;
+  terrain: Terrain[][];
+  spawn: TilePoint | null;
+  stars: TilePoint[];
+  enemies: TilePoint[];
+  checkpoints: TilePoint[];
+  portals: TilePoint[];
+  signs: Array<TilePoint & { text: SignText }>;
+}
+
+export const LEVEL_CHARS = '.#X=PSEKO';
+
+/** Builds the full character grid (rows top to bottom). */
+export function buildGrid(level: LevelData): string[] {
+  const grid: string[] = Array.from({ length: level.height }, () => '');
+  for (const section of level.sections) {
+    const width = Math.max(0, ...section.rows.map((row) => row.length));
+    const offset = level.height - section.rows.length;
+    for (let r = 0; r < level.height; r++) grid[r] += (section.rows[r - offset] ?? '').padEnd(width, '.');
+  }
+  return grid;
+}
+
+export function parseLevel(level: LevelData): ParsedLevel {
+  const grid = buildGrid(level);
+  const width = grid[0]?.length ?? 0;
+  const result: ParsedLevel = {
+    id: level.id,
+    biome: level.biome,
+    width,
+    height: level.height,
+    terrain: [],
+    spawn: null,
+    stars: [],
+    enemies: [],
+    checkpoints: [],
+    portals: [],
+    signs: [],
+  };
+
+  for (let row = 0; row < level.height; row++) {
+    const terrainRow: Terrain[] = [];
+    for (let col = 0; col < width; col++) {
+      const ch = grid[row][col];
+      const point = { col, row };
+      let terrain: Terrain = null;
+      switch (ch) {
+        case '#':
+          terrain = 'ground';
+          break;
+        case 'X':
+          terrain = 'stone';
+          break;
+        case '=':
+          terrain = 'oneway';
+          break;
+        case 'P':
+          result.spawn = point;
+          break;
+        case 'S':
+          result.stars.push(point);
+          break;
+        case 'E':
+          result.enemies.push(point);
+          break;
+        case 'K':
+          result.checkpoints.push(point);
+          break;
+        case 'O':
+          result.portals.push(point);
+          break;
+        default: {
+          const sign = level.signs?.[ch];
+          if (sign) result.signs.push({ ...point, text: sign });
+        }
+      }
+      terrainRow.push(terrain);
+    }
+    result.terrain.push(terrainRow);
+  }
+  return result;
+}

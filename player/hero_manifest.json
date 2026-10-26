@@ -1,0 +1,62 @@
+{
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "animations": {
+    "idle": {
+      "file": "hero_idle.png",
+      "frames": 4,
+      "frameRate": 4,
+      "repeat": -1
+    },
+    "run": {
+      "file": "hero_run.png",
+      "frames": 8,
+      "frameRate": 10,
+      "repeat": -1
+    },
+    "jump": {
+      "file": "hero_jump.png",
+      "frames": 4,
+      "frameRate": 6,
+      "repeat": -1
+    },
+    "fall": {
+      "file": "hero_fall.png",
+      "frames": 4,
+      "frameRate": 6,
+      "repeat": -1
+    },
+    "land": {
+      "file": "hero_land.png",
+      "frames": 4,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "hurt": {
+      "file": "hero_hurt.png",
+      "frames": 4,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "death": {
+      "file": "hero_death.png",
+      "frames": 6,
+      "frameRate": 7,
+      "repeat": 0
+    },
+    "attack": {
+      "file": "hero_attack.png",
+      "frames": 6,
+      "frameRate": 10,
+      "repeat": 0
+    },
+    "dash": {
+      "file": "hero_dash.png",
+      "frames": 6,
+      "frameRate": 12,
+      "repeat": -1
+    }
+  },
+  "format": "horizontal-strip",
+  "transparent": true
+}
