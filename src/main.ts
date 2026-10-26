@@ -25,12 +25,15 @@ const game = new Phaser.Game({
     arcade: { debug: import.meta.env.DEV && new URLSearchParams(window.location.search).has('debug') },
   },
   input: { activePointers: 3 },
-  // Relative asset paths ('assets/...') resolve against the deploy base ('/' locally, '/MiniVerse/' on Pages).
+  // Relative asset paths ('assets/...') resolve against the deploy base ('/' locally and on Cloudflare, '/MiniVerse/' on GitHub Pages).
   loader: { baseURL: import.meta.env.BASE_URL },
   scene: [MainMenuScene],
 });
 
 enableResponsiveZoom(game);
+
+// Replaced at build time, so production bundles drop this branch entirely.
+if (__APP_ENV__ === 'staging') void import('./core/envBadge').then((m) => m.mountEnvBadge(__APP_ENV__, __APP_COMMIT__));
 
 // Dev-only handle for debugging from the browser console / automated tests.
 if (import.meta.env.DEV) (window as unknown as { __game: Phaser.Game }).__game = game;
