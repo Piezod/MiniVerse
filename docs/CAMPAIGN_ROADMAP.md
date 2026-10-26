@@ -1,7 +1,121 @@
 # MiniVerse — Auditoría y hoja de ruta de campaña
 
-> Estado analizado: rama `feature/nuevos_controles_plataformas` (octubre 2026).
+> Estado: rama `feature/campaign-system` (octubre 2026). La Parte 0 describe lo implementado; las Partes A-D son la auditoría y la propuesta originales, con las marcas ya actualizadas.
 > Leyenda: ✅ implementado · 🟡 parcial · ❌ no existe.
+
+---
+
+## Parte 0 — Sistema de campaña implementado
+
+### 0.1 Visión general
+
+```
+levels.json (registro de archivos) ──► LevelManager  (niveles válidos, mejores resultados, guardado)
+campaign.json (capítulos)          ──► CampaignManager (capítulos, desbloqueos derivados, progreso)
+                                          │
+              ChapterSelect ──► LevelSelect (por capítulo) ──► Level + HUD
+```
+
+| Pieza | Archivo | Responsabilidad |
+| --- | --- | --- |
+| Registro de capítulos | `public/assets/platformer/campaign.json` | Capítulos declarativos |
+| Validación y gestor | `level/CampaignManager.ts` | `buildCampaign` valida; `CampaignManager` consulta y desbloquea |
+| Vistas y navegación | `level/campaignView.ts` | Datos de las tarjetas, rejilla y movimiento de selección (sin Phaser, probado) |
+| Progreso | `level/LevelManager.ts` | Único dueño de resultados y guardado; el gestor de campaña no guarda nada |
+| Carga | `level/levelLoader.ts` | `buildCampaignManager`, `getCampaign` |
+| Pantallas | `scenes/PlatformerChapterSelectScene.ts`, `PlatformerLevelSelectScene.ts` | Mapa de capítulos y lista de niveles |
+| Variantes | `biomes/createBiome.ts`, `biomes/index.ts` | Herencia de biomas |
+
+Flujo: `Preload → ChapterSelect → LevelSelect(capítulo) → Level`. Desde el nivel, *Niveles* vuelve a la
+lista del capítulo; al completar un capítulo el botón es *Capítulos*. La tienda sigue accesible (`T`) desde
+ambas pantallas.
+
+### 0.2 Esquema de `campaign.json`
+
+```json
+{
+  "chapters": [
+    {
+      "id": "prologue",
+      "name": "Prologo",
+      "description": "Texto corto para la tarjeta",
+      "order": 0,
+      "biome": null,
+      "levels": ["forest-1", "ruins-1", "ice-1", "volcano-1"],
+      "unlock": null,
+      "rewards": { "abilities": [{ "id": "jetpack", "level": 1 }] }
+    },
+    { "id": "station", "name": "...", "order": 1, "planned": true, "plannedLevels": 4,
+      "biome": "station", "levels": [], "unlock": { "chapters": ["prologue"] } }
+  ]
+}
+```
+
+- `levels` usa los **ids de nivel** (campo `id` del JSON del nivel), no nombres de archivo.
+- `biome`: bioma principal; si no es `null`, todos los niveles deben usarlo. `null` = cada nivel declara el suyo (Prólogo).
+- `unlock`: `null` o `{ "chapters": [...] }`. Un capítulo se desbloquea cuando **todos** los capítulos requeridos están completados.
+- `planned: true` + `plannedLevels`: capítulo anunciado sin contenido. Debe tener `levels: []`, se muestra como «Proximamente» y nunca es jugable, así que no hay referencias a niveles inexistentes.
+- `rewards.abilities`: se validan contra `abilities.json` y se exponen con `earnedRewards()` (derivadas de los capítulos completados).
+- Estados: `ready` (jugable), `planned`, `broken` (con errores: se lista, nunca se puede jugar y se informa por consola `[campaign]`; el juego sigue arrancando).
+- Se avisa de cualquier nivel válido de `levels.json` que no pertenezca a un capítulo jugable.
+
+### 0.3 Reglas de desbloqueo (todo derivado)
+
+- Un nivel está abierto si su capítulo está desbloqueado y es el primero del capítulo o el anterior está completado.
+- Un capítulo está completado cuando todos sus niveles lo están.
+- No se guarda «desbloqueado»: solo los mejores resultados. Así no pueden existir estados contradictorios.
+- `LevelManager.setUnlockRule` sustituye la regla lineal por la del `CampaignManager`; sin campaña mantiene la regla lineal anterior.
+
+### 0.4 Variantes de bioma
+
+```ts
+export const STATION = createBiome({
+  id: 'station', /* paleta, estilo, decoraciones... del bioma base */
+  variants: {
+    hangar:    { palette: { sky: [[0, '#0b1a33'], [1, '#2a4a7a']] }, lighting: { vignette: 0.3 } },
+    corridors: { ambient: [/* vapor */], lighting: { overlay: { color: 0xffaa33, alpha: 0.06, blend: 'add' } } },
+    reactor:   { palette: { glow: '#7dff9a' }, decorations: [/* ... */] },
+    boss:      { files: { tiles: 'assets/platformer/biomes/station/boss-tiles.png' } },
+  },
+});
+```
+
+Cada variante puede sobrescribir `name`, `accentColor`, `palette`, `style`, `decorations`, `decorationDensity`,
+`ambient`, `lighting`, `dust`, `files` (PNG) y `seed`. Lo que no se indica se hereda. Paleta, estilo e iluminación
+se mezclan campo a campo; las listas (decoraciones, partículas, polvo) sustituyen a las del base.
+
+Texturas: una variante **solo genera las partes que cambian**. Si únicamente cambia iluminación, partículas
+o decoraciones, reutiliza las claves de textura del bioma base (0 texturas nuevas); un cambio de paleta regenera
+todo; un cambio de estilo regenera todo salvo la niebla; un PNG en `files` o un `seed` distinto afectan solo a su parte.
+Los temas existentes (`forest`, `ruins`, `ice`, `volcano`) no cambian de ids ni de claves.
+
+Los niveles eligen variante con `"variant": "hangar"` junto a `"biome": "station"`; el validador rechaza variantes
+inexistentes. `getBiome(id, variant)` resuelve el tema y `BIOME_THEMES` lista bases y variantes (precarga y descarga).
+
+### 0.5 Persistencia
+
+- Progreso de niveles (`miniverse.platformer.progress`): **v2** `{ version: 2, best }`. La migración v1 → v2 conserva los mejores resultados y descarta la lista `unlocked` (ahora derivada); se reescribe al cargar.
+- Perfil (`miniverse.platformer.profile`): v2 sin cambios (estrellas, compras, mejoras, pasivas y armas F/R).
+
+### 0.6 Cómo añadir
+
+**Un nivel**
+1. Crea `levels/<archivo>.json` con `id` único (`variant` opcional) y añádelo al final de `levels.json`.
+2. Añade su `id` a la lista `levels` de un capítulo jugable. `npm test` comprueba validez, bioma y que no queden niveles huérfanos.
+
+**Un capítulo** (p. ej. Estación espacial)
+1. Crea el bioma (y variantes) y registra la definición en `biomes/index.ts` (`FAMILIES`).
+2. Crea los 4 niveles y regístralos en `levels.json`.
+3. En `campaign.json`, sustituye `"planned": true`/`plannedLevels` por la lista `levels` con los ids y revisa `unlock` y `rewards`.
+4. `npm test`: la validación cruzada detecta niveles inexistentes, biomas distintos, ciclos de desbloqueo y recompensas inválidas.
+
+**Una variante de bioma**: añade una entrada en `variants` del bioma (0.4) y úsala con `"variant"` en los niveles.
+
+### 0.7 Pendiente de esta fase
+
+- Aplicar las recompensas de capítulo al perfil (hoy solo se declaran y se consultan con `earnedRewards()`).
+- Biomas `station` y `alien`, sus niveles, enemigos y jefes (capítulos 1 y 2).
+- Objetos de nivel, comportamientos de enemigo modulares y jefes por fases (Partes C y D).
 
 ---
 
@@ -30,9 +144,9 @@ Métricas de los niveles actuales:
 | 3 | 03-ice | ice | 110×18 | 23 | 1 | 4 walker-fast, 2 bat, 1 bat-frost, 1 spitter |
 | 4 | 04-volcano | volcano | 140×16 | 31 | 1 | 2 walker-fast, 1 spitter, 1 golem, 1 bat, **1 magma-king (jefe)** |
 
-Limitaciones: 🟡 no hay concepto de **capítulo**; desbloqueo solo lineal; una única meta por nivel (`O`); terreno de una sola capa sin objetos dinámicos.
+Limitaciones: ✅ el concepto de **capítulo** ya existe (Parte 0) y el desbloqueo es por capítulo; una única meta por nivel (`O`); terreno de una sola capa sin objetos dinámicos.
 
-### A.2 Biomas ✅ (variantes ❌)
+### A.2 Biomas ✅ (variantes ✅, ver Parte 0)
 
 - Definición declarativa en `biomes/definitions/*.ts` → `createBiome({ palette, style, decorations, ambient, lighting, dust, files? })`.
 - Generador común `biomes/biomeArt.ts`: **todo procedural** (pixel art con paleta, dithering, contornos):
@@ -43,7 +157,7 @@ Limitaciones: 🟡 no hay concepto de **capítulo**; desbloqueo solo lineal; una
 - Iluminación: viñeta + capa de color (add/multiply). Partículas ambientales por bioma.
 - Las texturas se generan **al entrar en un nivel del bioma**; `files` permite sustituirlas por PNG reales.
 - Biomas: `forest`, `ruins`, `ice`, `volcano`.
-- ❌ **Variantes visuales dentro de un bioma** (hangar / reactor...): hoy cada aspecto distinto exige un bioma nuevo.
+- ✅ **Variantes visuales dentro de un bioma** (hangar / reactor...): implementadas, ver Parte 0.4.
 
 ### A.3 Enemigos ✅ (arquitectura) / 🟡 (variedad)
 
@@ -101,9 +215,9 @@ No existe ❌: fases, patrones de ataque secuenciados, invocaciones, arena cerra
 
 ### A.8 Limitaciones para capítulos de varios niveles
 
-1. No hay entidad **capítulo** (registro, desbloqueo, selección, recompensas).
-2. La selección de nivel cabe en 2 filas de 4 (8 niveles); a partir de ahí necesita paginación o selección por capítulo.
-3. Sin **variantes de bioma** (la campaña pedida necesita 4 aspectos por bioma).
+1. ✅ Resuelto: entidad **capítulo** (registro, desbloqueo, selección, recompensas derivadas).
+2. ✅ Resuelto: la selección es por capítulo (los 4 niveles de cada capítulo caben en una fila).
+3. ✅ Resuelto: **variantes de bioma** con herencia y texturas compartidas.
 4. Sin **objetos de nivel** (plataformas móviles, peligros, resortes...): el parser solo conoce terreno, estrellas, enemigos, checkpoints, carteles y portal.
 5. IA de enemigos no modular y familias de sprite cableadas en código.
 6. Requisitos de habilidad referencian ids de nivel concretos (`"requires": "forest-1"`).
@@ -132,8 +246,8 @@ view/  ParallaxBackground.ts · Decorations.ts · PlatformerFx.ts (emisores de p
 
 | Prioridad | Refactor | Motivo |
 | --- | --- | --- |
-| Alta | `campaign.json` con capítulos | Agrupar niveles, desbloqueo por capítulo, selección por capítulo |
-| Alta | Variantes de bioma | 4 aspectos por bioma sin duplicar biomas |
+| ✅ | `campaign.json` con capítulos | Agrupar niveles, desbloqueo por capítulo, selección por capítulo |
+| ✅ | Variantes de bioma | 4 aspectos por bioma sin duplicar biomas |
 | Alta | Sistema de **objetos de nivel** (registro de módulos como las habilidades) | Plataformas móviles, peligros, resortes |
 | Alta | Comportamientos de enemigo como **módulos componibles** | Nuevas criaturas sin tocar `Enemy.ts` |
 | Alta | Framework de **jefes por fases** | Jefes de capítulo |
@@ -259,8 +373,8 @@ Ejemplo de nivel con variante y objetos:
 | Paso | Contenido | Resultado verificable |
 | --- | --- | --- |
 | 0 | ✅ Controles F/R (hecho en esta rama) | Tests de teclas, cooldowns y energía |
-| 1 | `campaign.json` + CampaignManager + selección por capítulo + guardado v2 | Los 4 niveles actuales funcionan como "Capítulo 0 / Prólogo" |
-| 2 | Variantes de bioma + bioma `station` (placeholders) | 4 aspectos generados desde una definición |
+| 1 | ✅ `campaign.json` + CampaignManager + selección por capítulo + guardado v2 | Los 4 niveles actuales funcionan como "Capítulo 0 / Prólogo" |
+| 2 | 🟡 Variantes de bioma ✅; bioma `station` (placeholders) pendiente | 4 aspectos generados desde una definición |
 | 3 | Sistema de objetos: plataforma móvil y láser + validador | Tests de alcanzabilidad con plataformas móviles |
 | 4 | Comportamientos de enemigo modulares + robots del capítulo 1 | Tests de catálogo e IA por módulo |
 | 5 | Framework de jefes + OMEGA-7 | Tests de transición de fases |

@@ -4,13 +4,25 @@ import { ICE } from './definitions/ice';
 import { RUINS } from './definitions/ruins';
 import { VOLCANO } from './definitions/volcano';
 
-/** Biomes available to level files ("biome": "<id>"). Add new definitions here. */
-export const BIOMES: Readonly<Record<string, BiomeTheme>> = Object.fromEntries(
-  [FOREST, ICE, VOLCANO, RUINS].map((biome) => [biome.id, biome]),
+const FAMILIES: readonly BiomeTheme[] = [FOREST, ICE, VOLCANO, RUINS];
+
+/** Base biomes available to level files ("biome": "<id>"). Add new definitions to FAMILIES. */
+export const BIOMES: Readonly<Record<string, BiomeTheme>> = Object.fromEntries(FAMILIES.map((biome) => [biome.id, biome]));
+
+/** Every theme (bases and variants), for asset queueing and unloading. */
+export const BIOME_THEMES: readonly BiomeTheme[] = FAMILIES.flatMap((biome) => [biome, ...Object.values(biome.variants)]);
+
+/** Variant ids per biome, used to validate "variant" in level files. */
+export const BIOME_VARIANTS: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
+  FAMILIES.map((biome) => [biome.id, Object.keys(biome.variants)]),
 );
 
-export function getBiome(id: string): BiomeTheme {
+/** Theme for a level: the base biome, or its variant when one is given. */
+export function getBiome(id: string, variant?: string | null): BiomeTheme {
   const biome = BIOMES[id];
   if (!biome) throw new Error(`Unknown biome "${id}"`);
-  return biome;
+  if (!variant) return biome;
+  const theme = biome.variants[variant];
+  if (!theme) throw new Error(`Unknown variant "${variant}" of biome "${id}"`);
+  return theme;
 }

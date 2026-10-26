@@ -1,12 +1,15 @@
 import type Phaser from 'phaser';
-import { BIOMES } from '../biomes';
+import { BIOME_VARIANTS, BIOMES } from '../biomes';
 import type { EnemyDef } from '../enemies/EnemyCatalog';
+import { buildCampaign, CampaignManager } from './CampaignManager';
 import { type LevelEntry, LevelManager, localProgressStorage } from './LevelManager';
 import { validateLevel } from './LevelValidator';
 
 /** Campaign definition: public/assets/platformer/levels/levels.json lists level files in order. */
 const LEVELS_PATH = 'assets/platformer/levels/';
 const REGISTRY_KEY = 'platformer.levels.registry';
+const CAMPAIGN_KEY = 'platformer.campaign';
+const CAMPAIGN_URL = 'assets/platformer/campaign.json';
 const levelKey = (file: string): string => `platformer.level.${file}`;
 
 interface LevelRegistry {
@@ -14,8 +17,10 @@ interface LevelRegistry {
 }
 
 let manager: LevelManager | null = null;
+let campaign: CampaignManager | null = null;
 
 export function queueLevels(scene: Phaser.Scene): void {
+  scene.load.json(CAMPAIGN_KEY, CAMPAIGN_URL);
   scene.load.once(`filecomplete-json-${REGISTRY_KEY}`, (_key: string, _type: string, registry: LevelRegistry) => {
     for (const file of registry.levels ?? []) scene.load.json(levelKey(file), LEVELS_PATH + file);
   });
@@ -30,7 +35,7 @@ export function buildLevelManager(scene: Phaser.Scene, enemies: Readonly<Record<
 
   const entries: LevelEntry[] = files.map((file, index) => {
     const raw: unknown = scene.cache.json.get(levelKey(file));
-    const validation = validateLevel(raw ?? null, Object.keys(BIOMES), enemies);
+    const validation = validateLevel(raw ?? null, Object.keys(BIOMES), enemies, BIOME_VARIANTS);
     for (const issue of validation.issues) {
       (issue.severity === 'error' ? console.error : console.warn)(`[levels] ${file}: ${issue.message}`);
     }
@@ -56,9 +61,25 @@ export function getLevelManager(): LevelManager {
   return manager;
 }
 
+/** Builds the chapters from campaign.json on top of the loaded levels. Call after buildLevelManager. */
+export function buildCampaignManager(scene: Phaser.Scene, abilities?: Readonly<Record<string, { levels: readonly unknown[] }>>): CampaignManager {
+  const levels = getLevelManager();
+  const { chapters, issues } = buildCampaign(scene.cache.json.get(CAMPAIGN_KEY), { levels: levels.levels, biomes: Object.keys(BIOMES), abilities });
+  for (const issue of issues) console.error(`[campaign] ${issue.chapter}: ${issue.message}`);
+  campaign = new CampaignManager(chapters, levels);
+  return campaign;
+}
+
+export function getCampaign(): CampaignManager {
+  if (!campaign) throw new Error('Campaign not loaded yet');
+  return campaign;
+}
+
 export function releaseLevels(game: Phaser.Game): void {
   const registry = game.cache.json.get(REGISTRY_KEY) as LevelRegistry | undefined;
   for (const file of registry?.levels ?? []) game.cache.json.remove(levelKey(file));
   game.cache.json.remove(REGISTRY_KEY);
+  game.cache.json.remove(CAMPAIGN_KEY);
   manager = null;
+  campaign = null;
 }

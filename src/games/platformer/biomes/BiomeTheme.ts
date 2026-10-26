@@ -48,7 +48,13 @@ export interface BiomeLighting {
  * (level JSON) and the ambience (biome) are fully independent.
  */
 export interface BiomeTheme {
+  /** `biome` for base themes, `biome/variant` for variants. */
   id: string;
+  /** Biome this theme belongs to (equals id for base themes). */
+  baseId: string;
+  variant: string | null;
+  /** Variants of a base theme by id (always empty on variants themselves). */
+  variants: Readonly<Record<string, BiomeTheme>>;
   name: string;
   accentColor: number;
   backgroundColor: string;

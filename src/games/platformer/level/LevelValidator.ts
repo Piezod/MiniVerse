@@ -30,8 +30,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** `knownEnemies` (from enemies.json) is optional so structure can be checked without it. */
-export function validateLevel(raw: unknown, knownBiomes: readonly string[], knownEnemies?: Readonly<Record<string, EnemyDef>>): ValidationResult {
+/** `knownEnemies` (from enemies.json) is optional so structure can be checked without it; `variants` maps biome id to its variant ids. */
+export function validateLevel(
+  raw: unknown,
+  knownBiomes: readonly string[],
+  knownEnemies?: Readonly<Record<string, EnemyDef>>,
+  variants: Readonly<Record<string, readonly string[]>> = {},
+): ValidationResult {
   const issues: ValidationIssue[] = [];
   const error = (message: string): void => void issues.push({ severity: 'error', message });
   const warn = (message: string): void => void issues.push({ severity: 'warning', message });
@@ -41,6 +46,10 @@ export function validateLevel(raw: unknown, knownBiomes: readonly string[], know
   if (typeof id !== 'string' || !ID_PATTERN.test(id)) error('"id" debe ser texto en minúsculas, números y guiones');
   if (typeof name !== 'string' || !name.trim()) error('"name" es obligatorio');
   if (typeof biome !== 'string' || !knownBiomes.includes(biome)) error(`"biome" debe ser uno de: ${knownBiomes.join(', ')}`);
+  if (raw.variant !== undefined) {
+    const allowed = typeof biome === 'string' ? (variants[biome] ?? []) : [];
+    if (typeof raw.variant !== 'string' || !allowed.includes(raw.variant)) error(`"variant" debe ser una variante del bioma${allowed.length ? `: ${allowed.join(', ')}` : ' (el bioma no tiene variantes)'}`);
+  }
   if (typeof height !== 'number' || !Number.isInteger(height) || height < MIN_HEIGHT || height > MAX_HEIGHT) {
     error(`"height" debe ser un entero entre ${MIN_HEIGHT} y ${MAX_HEIGHT}`);
   }

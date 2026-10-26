@@ -18,8 +18,26 @@ export interface LevelResult {
 }
 
 interface SavedProgress {
-  unlocked: string[];
+  version: 2;
   best: Record<string, LevelResult>;
+}
+
+export const PROGRESS_VERSION = 2;
+
+/**
+ * Converts a stored progress to the current version (pure). v1 also kept an `unlocked` list; unlocking
+ * is now derived from completed levels, so only the best results are carried over.
+ */
+export function migrateProgress(stored: unknown): SavedProgress {
+  const best: Record<string, LevelResult> = {};
+  const raw = typeof stored === 'object' && stored !== null ? (stored as { best?: unknown }).best : null;
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    for (const [id, result] of Object.entries(raw)) {
+      const r = result as Partial<LevelResult> | null;
+      if (r && Number.isFinite(r.stars) && Number.isFinite(r.total)) best[id] = { stars: Math.max(0, r.stars as number), total: Math.max(0, r.total as number) };
+    }
+  }
+  return { version: PROGRESS_VERSION, best };
 }
 
 export interface ProgressStorage {
@@ -50,24 +68,32 @@ export const localProgressStorage = (key: string): ProgressStorage => ({
 });
 
 /**
- * Campaign state: ordered levels (from levels.json), unlocking and best results.
- * The first valid level is always unlocked; completing a level unlocks the next one.
+ * Level state: ordered levels (from levels.json) and best results. Unlocking is derived: by default
+ * the first valid level is open and completing a level opens the next one; the CampaignManager
+ * replaces that rule with per-chapter rules through setUnlockRule.
  */
 export class LevelManager {
-  private progress: SavedProgress = { unlocked: [], best: {} };
+  private progress: SavedProgress = { version: PROGRESS_VERSION, best: {} };
+  private rule: ((id: string) => boolean) | null = null;
 
   constructor(
     readonly levels: readonly LevelEntry[],
     private readonly storage: ProgressStorage,
   ) {
+    const stored = storage.load();
+    if (stored === null) return;
     try {
-      const saved = JSON.parse(storage.load() ?? 'null') as Partial<SavedProgress> | null;
-      if (saved && Array.isArray(saved.unlocked) && typeof saved.best === 'object' && saved.best) {
-        this.progress = { unlocked: saved.unlocked.filter((id) => typeof id === 'string'), best: saved.best };
-      }
+      const parsed = JSON.parse(stored) as { version?: number } | null;
+      this.progress = migrateProgress(parsed);
+      if (!parsed || parsed.version !== PROGRESS_VERSION) this.save();
     } catch {
       // Corrupt save: start fresh.
     }
+  }
+
+  /** Replaces the default linear unlocking (used by the campaign). */
+  setUnlockRule(rule: ((id: string) => boolean) | null): void {
+    this.rule = rule;
   }
 
   get(id: string): LevelEntry | undefined {
@@ -85,8 +111,11 @@ export class LevelManager {
   }
 
   isUnlocked(id: string): boolean {
-    const first = this.levels.find((level) => level.validation.ok);
-    return this.isPlayable(id) && (id === first?.id || this.progress.unlocked.includes(id));
+    if (!this.isPlayable(id)) return false;
+    if (this.rule) return this.rule(id);
+    const valid = this.levels.filter((level) => level.validation.ok);
+    const position = valid.findIndex((level) => level.id === id);
+    return position === 0 || this.isCompleted(valid[position - 1].id);
   }
 
   next(id: string): LevelEntry | undefined {
@@ -102,19 +131,20 @@ export class LevelManager {
     return this.progress.best[id] !== undefined;
   }
 
-  /** Records a completed level, keeps the best star count and unlocks the next level. */
+  /** Records a completed level and keeps the best star count. Returns the next level in registry order. */
   complete(id: string, result: LevelResult): LevelEntry | undefined {
     const previous = this.progress.best[id];
     if (!previous || result.stars > previous.stars) this.progress.best[id] = result;
-    if (!this.progress.unlocked.includes(id)) this.progress.unlocked.push(id);
-    const next = this.next(id);
-    if (next && !this.progress.unlocked.includes(next.id)) this.progress.unlocked.push(next.id);
-    this.storage.save(JSON.stringify(this.progress));
-    return next;
+    this.save();
+    return this.next(id);
   }
 
   /** Last unlocked playable level, used as the default selection. */
   latestUnlocked(): LevelEntry | undefined {
     return [...this.levels].reverse().find((level) => this.isUnlocked(level.id));
+  }
+
+  private save(): void {
+    this.storage.save(JSON.stringify(this.progress));
   }
 }
