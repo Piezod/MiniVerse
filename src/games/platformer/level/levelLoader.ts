@@ -3,6 +3,7 @@ import { BIOME_VARIANTS, BIOMES } from '../biomes';
 import type { EnemyDef } from '../enemies/EnemyCatalog';
 import { buildCampaign, CampaignManager } from './CampaignManager';
 import { type LevelEntry, LevelManager, localProgressStorage } from './LevelManager';
+import { clearSandboxLevels } from './sandboxLevels';
 import { validateLevel } from './LevelValidator';
 
 /** Campaign definition: public/assets/platformer/levels/levels.json lists level files in order. */
@@ -62,11 +63,15 @@ export function getLevelManager(): LevelManager {
 }
 
 /** Builds the chapters from campaign.json on top of the loaded levels. Call after buildLevelManager. */
-export function buildCampaignManager(scene: Phaser.Scene, abilities?: Readonly<Record<string, { levels: readonly unknown[] }>>): CampaignManager {
+export function buildCampaignManager(
+  scene: Phaser.Scene,
+  abilities?: Readonly<Record<string, { levels: readonly unknown[] }>>,
+  enemies?: Readonly<Record<string, { boss: boolean }>>,
+): CampaignManager {
   const levels = getLevelManager();
-  const { chapters, issues } = buildCampaign(scene.cache.json.get(CAMPAIGN_KEY), { levels: levels.levels, biomes: Object.keys(BIOMES), abilities });
+  const { chapters, issues, meta } = buildCampaign(scene.cache.json.get(CAMPAIGN_KEY), { levels: levels.levels, biomes: Object.keys(BIOMES), variants: BIOME_VARIANTS, abilities, enemies });
   for (const issue of issues) console.error(`[campaign] ${issue.chapter}: ${issue.message}`);
-  campaign = new CampaignManager(chapters, levels);
+  campaign = new CampaignManager(chapters, levels, meta);
   return campaign;
 }
 
@@ -82,4 +87,5 @@ export function releaseLevels(game: Phaser.Game): void {
   game.cache.json.remove(CAMPAIGN_KEY);
   manager = null;
   campaign = null;
+  clearSandboxLevels();
 }

@@ -1,0 +1,504 @@
+{
+  "id": "c1-1-hangar",
+  "name": "Despertar en el Hangar",
+  "biome": "station",
+  "variant": "hangar",
+  "height": 24,
+  "sections": [
+    {
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX..................................S..XX.",
+        "XXXXXXXXXX.................................====XX.",
+        "XXXXXXXXXX.....................................XX.",
+        "XXXXXXXXXX.............................===.....XX.",
+        "XXXXXXXXXX.......................S.............XX.",
+        "XX.........................============........XX.",
+        "XX.............................................XX.",
+        "XX......................XXX.......................",
+        "XX...........S..XX......XXXXX.....................",
+        "XX..P....X.1....XX..2...XXXXX...D.................",
+        "##################################################",
+        "##################################################",
+        "##################################################"
+      ]
+    },
+    {
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "........................S................S............................",
+        "..............===================...===========.......................",
+        "......................................................................",
+        "............XX.......................................S................",
+        "............XX....................................XXXXXX..............",
+        ".........XX.XX....................................XXXXXX..............",
+        ".........XX.XX.................................XXXXXXXXX..............",
+        "......XX.XX.XX.................................XXXXXXXXX..............",
+        "......XX.XX.XX....D...S....................D...XXXXXXXXX............K.",
+        "############################..........################################",
+        "############################....S.....################################",
+        "######################################################################"
+      ]
+    },
+    {
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "...........................................................................",
+        "...........................................................................",
+        "...........................................................S...............",
+        "..........................................................====.............",
+        "........................................................S..................",
+        "....................................................====...................",
+        "...................................................S.......................",
+        "..................................................XXXXXXXXXXXXXX...........",
+        "..................................................XXXXXXXXXXXXXX...........",
+        "..................................................XXXXXXXXXXXXXXXX.........",
+        "..................................................XXXXXXXXXXXXXXXX.........",
+        "..................................................XXXXXXXXXXXXXXXXXX.......",
+        "..................................................XXXXXXXXXXXXXXXXXX.......",
+        "..................................................XXXXXXXXXXXXXXXXXXXX.....",
+        "..................................................XXXXXXXXXXXXXXXXXXXX.....",
+        "..................................................XXXXXXXXXXXXXXXXXXXXXX...",
+        "..................................................XXXXXXXXXXXXXXXXXXXXXX...",
+        "..................................................XXXXXXXXXXXXXXXXXXXXXXXXX",
+        "......................S...............SD..........XXXXXXXXXXXXXXXXXXXXXXXXX",
+        "##########..........#####..........############...XXXXXXXXXXXXXXXXXXXXXXXXX",
+        "##########..........#####..........############...XXXXXXXXXXXXXXXXXXXXXXXXX",
+        "##########..........#####..........############...XXXXXXXXXXXXXXXXXXXXXXXXX"
+      ]
+    },
+    {
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "....................................................X.....X......",
+        "....................................................X.....X......",
+        "....................................................X.....X......",
+        ".......................................S....4.......X.....X......",
+        ".....................................XXXXXXXX.......X.....X......",
+        ".....................................XXXXXXXX....................",
+        "...................................XXXXXXXXXX....................",
+        "...............................N...XXXXXXXXXX....................",
+        "...3........S.......S..............XXXXXXXXXX.........SS.........",
+        "#################################################################",
+        "#################################################################",
+        "#################################################################"
+      ]
+    },
+    {
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        "......................................................................",
+        ".......................................S..............................",
+        ".....................................XXXXXX...........................",
+        ".....................................XXXXXX...........................",
+        "............S..............S.........XXXXXX...........................",
+        "..........XXXXXX.........XXXXXX....XXXXXX.............................",
+        "..........XXXXXX.........XXXXXX....XXXXXX.............................",
+        "..........XXXXXX..D......XXXXXX....XXXXXX........N....................",
+        "........XXXXXXXXXXXX...XXXXXX....XXXXXX........S......................",
+        "........XXXXXXXXXXXX...XXXXXX....XXXXXX.......XXXX....................",
+        "..K.....XXXXXXXXXXXX.S.XXXXXX....XXXXXX.......XXXX....................",
+        "######################################################################",
+        "######################################################################",
+        "######################################################################"
+      ]
+    },
+    {
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        ".................................................X",
+        ".................................................X",
+        ".................................................X",
+        ".................................................X",
+        ".................................................X",
+        ".................................................X",
+        ".................................................X",
+        "............................S....................X",
+        "...........................====..................X",
+        ".................................................X",
+        ".....................S...........................X",
+        "..................=======........................X",
+        ".................................................X",
+        "...........S...................S.................X",
+        "........=======.............=======..............X",
+        ".......................................5.........X",
+        "......................................XXX........X",
+        "..........D.........N.................XXX........X",
+        "......................................XXX.....O..X",
+        "##################################################",
+        "##################################################",
+        "##################################################"
+      ]
+    }
+  ],
+  "signs": {
+    "1": {
+      "keyboard": "A/D + ESPACIO",
+      "touch": "MOVER / SALTAR"
+    },
+    "2": {
+      "keyboard": "CONTENEDORES",
+      "touch": "CONTENEDORES"
+    },
+    "3": {
+      "keyboard": "LASER: ESPERA EL AVISO",
+      "touch": "LASER: ESPERA EL AVISO"
+    },
+    "4": {
+      "keyboard": "PISA EL INTERRUPTOR",
+      "touch": "PISA EL INTERRUPTOR"
+    },
+    "5": {
+      "keyboard": "TERMINAL DE COMUNICACIONES",
+      "touch": "TERMINAL DE COMUNICACIONES"
+    }
+  },
+  "enemies": {
+    "D": "drone-scout",
+    "N": "drone-sentinel"
+  },
+  "objects": [
+    {
+      "type": "movingPlatform",
+      "id": "cargo-a",
+      "col": 130,
+      "row": 21,
+      "width": 3,
+      "axis": "x",
+      "travel": 7,
+      "speed": 42,
+      "wait": 0.8
+    },
+    {
+      "type": "movingPlatform",
+      "id": "cargo-b",
+      "col": 145,
+      "row": 21,
+      "width": 3,
+      "axis": "x",
+      "travel": 7,
+      "speed": 42,
+      "wait": 0.8,
+      "offset": 0.5
+    },
+    {
+      "type": "movingPlatform",
+      "id": "cargo-lift",
+      "col": 167,
+      "row": 21,
+      "width": 3,
+      "axis": "y",
+      "travel": -12,
+      "speed": 36,
+      "wait": 1.2
+    },
+    {
+      "type": "laser",
+      "id": "laser-a",
+      "col": 204,
+      "row": 12,
+      "orientation": "vertical",
+      "length": 8,
+      "on": 1.2,
+      "off": 1.8,
+      "warning": 0.7
+    },
+    {
+      "type": "laser",
+      "id": "laser-b",
+      "col": 211,
+      "row": 12,
+      "orientation": "vertical",
+      "length": 8,
+      "on": 1.2,
+      "off": 1.8,
+      "warning": 0.7,
+      "offset": 1.85
+    },
+    {
+      "type": "electricFloor",
+      "col": 218,
+      "row": 20,
+      "width": 3,
+      "on": 1,
+      "off": 2.4,
+      "warning": 1
+    },
+    {
+      "type": "laser",
+      "id": "laser-c",
+      "col": 225,
+      "row": 12,
+      "orientation": "vertical",
+      "length": 8,
+      "on": 1,
+      "off": 2,
+      "warning": 0.8,
+      "offset": 1
+    },
+    {
+      "type": "switch",
+      "id": "hangar-door",
+      "col": 236,
+      "row": 15
+    },
+    {
+      "type": "door",
+      "id": "door-1",
+      "col": 247,
+      "row": 17,
+      "height": 4,
+      "opensWith": [
+        "hangar-door"
+      ]
+    },
+    {
+      "type": "door",
+      "id": "door-2",
+      "col": 253,
+      "row": 17,
+      "height": 4,
+      "opensWith": [
+        "hangar-door"
+      ]
+    }
+  ],
+  "story": {
+    "beats": [
+      {
+        "id": "wake",
+        "trigger": {
+          "type": "start"
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Piezod, soy LUMA. Estás en una estación espacial. La tripulación ha desaparecido.",
+            "duration": 2.5
+          }
+        ]
+      },
+      {
+        "id": "tutorial-move",
+        "trigger": {
+          "type": "zone",
+          "col": 10,
+          "row": 14,
+          "width": 4,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Flechas o A/D para moverte. Mantén ESPACIO para saltar más alto.",
+            "touchText": "Usa las flechas de la pantalla. Mantén el botón de salto para llegar más alto.",
+            "duration": 2
+          }
+        ]
+      },
+      {
+        "id": "tutorial-crates",
+        "trigger": {
+          "type": "zone",
+          "col": 20,
+          "row": 14,
+          "width": 3,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Cápsulas vacías. La evacuación quedó a medias... Busca una salida entre los contenedores.",
+            "duration": 2
+          }
+        ]
+      },
+      {
+        "id": "hangar-enter",
+        "trigger": {
+          "type": "zone",
+          "col": 25,
+          "row": 14,
+          "width": 3,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Explorador delante. El ojo rojo avisa de su embestida. Esquiva, dispara o salta sobre él.",
+            "duration": 2
+          }
+        ]
+      },
+      {
+        "id": "signs-of-fight",
+        "trigger": {
+          "type": "zone",
+          "col": 45,
+          "row": 14,
+          "width": 3,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Los invasores alteraron la seguridad. Esos drones ya no reconocen a la tripulación.",
+            "duration": 2.5
+          }
+        ]
+      },
+      {
+        "id": "cargo",
+        "trigger": {
+          "type": "zone",
+          "col": 123,
+          "row": 14,
+          "width": 4,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Carga abandonada. Las plataformas aún funcionan. Espera una base firme antes de atacar.",
+            "duration": 2
+          }
+        ]
+      },
+      {
+        "id": "security",
+        "trigger": {
+          "type": "zone",
+          "col": 196,
+          "row": 12,
+          "width": 3,
+          "height": 9
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Seguridad activa. Espera el aviso de los láseres; el centinela queda expuesto tras disparar.",
+            "duration": 2.5
+          }
+        ]
+      },
+      {
+        "id": "switch-found",
+        "trigger": {
+          "type": "zone",
+          "col": 228,
+          "row": 14,
+          "width": 4,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "El interruptor elevado abre ambas puertas. Puedes dejar atrás al centinela."
+          }
+        ]
+      },
+      {
+        "id": "containers",
+        "trigger": {
+          "type": "zone",
+          "col": 264,
+          "row": 14,
+          "width": 3,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Marcas de plasma en los contenedores. Úsalos como cobertura entre disparos.",
+            "duration": 2
+          }
+        ]
+      },
+      {
+        "id": "human-fragment",
+        "trigger": {
+          "type": "zone",
+          "col": 321,
+          "row": 12,
+          "width": 4,
+          "height": 9
+        },
+        "lines": [
+          {
+            "speaker": "transmision",
+            "text": "...aquí... supervivientes... nos llevan... (señal perdida)",
+            "duration": 2
+          }
+        ]
+      },
+      {
+        "id": "terminal",
+        "blocking": true,
+        "trigger": {
+          "type": "zone",
+          "col": 366,
+          "row": 14,
+          "width": 7,
+          "height": 7
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Terminal recuperada. Es una llamada humana de auxilio. Escucha."
+          },
+          {
+            "speaker": "transmision",
+            "text": "Si alguien puede oírme... nos están llevando... no dejéis que lleguen al Núcleo..."
+          },
+          {
+            "speaker": "luma",
+            "text": "Los NÉXAR se llevaron a la tripulación hacia el Núcleo. Piezod, aún podemos encontrarlos."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -9,7 +9,7 @@ import {
   drawUiFrame,
   drawWalkerFrame,
 } from './actors';
-import { drawAbilityIcon, drawBatFrame, drawGolemFrame, drawProjectileFrame, drawSpitterFrame } from './combatArt';
+import { drawAbilityIcon, drawBatFrame, drawDroneFrame, drawGolemFrame, drawProjectileFrame, drawSentinelFrame, drawSpitterFrame } from './combatArt';
 
 /**
  * World-independent assets (characters, items, FX, UI, sounds). World assets live in worlds/<id>/.
@@ -47,6 +47,8 @@ export const TEX = {
   bat: 'platformer.enemy.bat',
   golem: 'platformer.enemy.golem',
   spitter: 'platformer.enemy.spitter',
+  drone: 'platformer.enemy.drone',
+  sentinel: 'platformer.enemy.sentinel',
   projectiles: 'platformer.projectiles',
   abilityIcons: 'platformer.ability-icons',
 } as const;
@@ -95,6 +97,8 @@ export const PLATFORMER_ASSETS: readonly AssetDef[] = [
   { kind: 'spritesheet', key: TEX.bat, frameWidth: 16, frameHeight: 16, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawBatFrame },
   { kind: 'spritesheet', key: TEX.golem, frameWidth: 24, frameHeight: 24, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawGolemFrame },
   { kind: 'spritesheet', key: TEX.spitter, frameWidth: 16, frameHeight: 16, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawSpitterFrame },
+  { kind: 'spritesheet', key: TEX.drone, frameWidth: 16, frameHeight: 16, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawDroneFrame },
+  { kind: 'spritesheet', key: TEX.sentinel, frameWidth: 24, frameHeight: 24, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawSentinelFrame },
   { kind: 'spritesheet', key: TEX.projectiles, frameWidth: 8, frameHeight: 8, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawProjectileFrame },
   { kind: 'spritesheet', key: TEX.abilityIcons, frameWidth: 8, frameHeight: 8, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawAbilityIcon },
   ...Object.values(AUDIO),

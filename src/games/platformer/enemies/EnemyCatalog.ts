@@ -1,11 +1,21 @@
 /** Enemy definitions loaded from enemies.json (Phaser-free so they can be validated in tests). */
 import { ATTACK_FORMS, type AttackForm } from '../combat/damage';
 
-export const MOVEMENTS = ['patrol', 'chase', 'fly', 'stationary'] as const;
+export const MOVEMENTS = ['patrol', 'chase', 'fly', 'hover', 'stationary'] as const;
 export const STOMP_RULES = ['kill', 'damage', 'immune'] as const;
-export const ATTACK_KINDS = ['shoot', 'hop'] as const;
+export const ATTACK_KINDS = ['shoot', 'hop', 'lunge'] as const;
 
 export type Movement = (typeof MOVEMENTS)[number];
+
+/** Bounded patrol of a hovering enemy: sweeps +-range, bobs +-bob and may leave the zone by `leash` px while chasing. */
+export interface PatrolZone {
+  range: number;
+  bob: number;
+  leash: number;
+  standoff?: number;
+}
+
+export const isFlying = (def: Pick<EnemyDef, 'movement'>): boolean => def.movement === 'fly' || def.movement === 'hover';
 export type StompRule = (typeof STOMP_RULES)[number];
 
 export interface EnemyAttack {
@@ -16,6 +26,8 @@ export interface EnemyAttack {
   damage: number;
   /** Projectile speed (shoot) or jump velocity (hop), px/s. */
   power: number;
+  /** Seconds the enemy stops and flashes before the attack lands (0 = no warning). */
+  telegraph: number;
   /** Element of the attack; defaults to the enemy's element. */
   element: string | null;
 }
@@ -49,6 +61,8 @@ export interface EnemyDef {
   movement: Movement;
   /** Distance (px) at which it notices the player. */
   detectRange: number;
+  /** Flight zone of `hover` enemies, in px around their spawn point (null for other movements). */
+  patrol: PatrolZone | null;
   attack?: EnemyAttack;
   /** Frontal shield: hits coming from the side it faces are multiplied by this. */
   guard?: number;
@@ -100,7 +114,7 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
       return null;
     }
     const merged: RawEnemy = { ...parent, ...entry };
-    for (const key of ['resist', 'formResist'])
+    for (const key of ['resist', 'formResist', 'patrol'])
       if (isRecord(parent[key]) || isRecord(entry[key])) merged[key] = { ...(parent[key] as object), ...(entry[key] as object) };
     if (isRecord(parent.attack) && isRecord(entry.attack)) merged.attack = { ...parent.attack, ...entry.attack };
     return merged;
@@ -181,9 +195,25 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
           range: n('range', 8, 400, 120),
           damage: n('damage', 0, 10, 1),
           power: n('power', 10, 600, 100),
+          telegraph: n('telegraph', 0, 2, 0),
           element: typeof a.element === 'string' ? a.element : element,
         };
         if (typeof a.element === 'string' && !isElement(a.element)) errors.push(`"attack.element" desconocido: ${a.element}`);
+      }
+    }
+    const movement = oneOf('movement', MOVEMENTS, 'patrol');
+    let patrol: PatrolZone | null = null;
+    if (r.patrol !== undefined && movement !== 'hover') errors.push('"patrol" solo se usa con "movement": "hover"');
+    else if (movement === 'hover') {
+      const p = r.patrol === undefined ? {} : r.patrol;
+      if (!isRecord(p)) errors.push('"patrol" debe ser un objeto { range, bob, leash }');
+      else {
+        const z = (key: string, min: number, max: number, fallback: number): number => {
+          const value = p[key] ?? fallback;
+          if (typeof value !== 'number' || value < min || value > max) errors.push(`"patrol.${key}" debe estar entre ${min} y ${max}`);
+          return typeof value === 'number' ? value : fallback;
+        };
+        patrol = { range: z('range', 8, 400, 64), bob: z('bob', 0, 24, 6), leash: z('leash', 0, 200, 48), standoff: z('standoff', 0, 160, 0) };
       }
     }
     const def: EnemyDef = {
@@ -203,8 +233,9 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
       statusImmune,
       stomp: oneOf('stomp', STOMP_RULES, 'kill'),
       stompDamage: num('stompDamage', 0, 99, 1),
-      movement: oneOf('movement', MOVEMENTS, 'patrol'),
+      movement,
       detectRange: num('detectRange', 0, 600, 0),
+      patrol,
       attack,
       guard: r.guard === undefined ? undefined : num('guard', 0, 1),
       reward: { energy: isRecord(r.reward) && typeof r.reward.energy === 'number' ? Math.max(0, r.reward.energy) : 0 },

@@ -6,7 +6,8 @@ import type { ElementChart } from '../combat/elements';
 import { Cooldown } from '../combat/resources';
 import { rollEffects, type StatusDef, StatusEffects } from '../combat/status';
 import { type AiState, nextAiState } from '../enemies/ai';
-import type { EnemyDef } from '../enemies/EnemyCatalog';
+import { type EnemyDef, isFlying } from '../enemies/EnemyCatalog';
+import { hoverPatrol, leashedChase, lungeVelocity, telegraphOn } from '../enemies/flight';
 import { DEPTH } from '../view/ParallaxBackground';
 
 /** What an enemy needs from the level, without depending on the scene class. */
@@ -23,6 +24,8 @@ export interface EnemyHost {
 
 const HURT_TIME = 0.25;
 const ATTACK_TIME = 0.45;
+/** How long a lunge keeps its dash velocity (s). */
+const LUNGE_TIME = 0.35;
 /** Bouncing repeatedly on a big enemy only counts one stomp per this window (s). */
 const STOMP_IMMUNITY = 0.7;
 
@@ -40,6 +43,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private attackTime = 0;
   private stompImmunity = 0;
   private attacked = false;
+  /** Seconds of attack warning left (the enemy holds still and flashes). */
+  private windup = 0;
+  private windupClock = 0;
+  private attackTarget = { x: 0, y: 0 };
+  private patrolDir: 1 | -1 = 1;
+  private readonly homeX: number;
   private readonly homeY: number;
   private readonly bar: Phaser.GameObjects.Graphics | null;
   private elapsed = 0;
@@ -58,6 +67,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.defense = { element: def.element, armor: def.armor, resist: def.resist, formResist: def.formResist, immune: def.immune };
     this.status = new StatusEffects(host.statusCatalog, { element: def.element, immune: def.statusImmune });
     this.attackCooldown = new Cooldown(def.attack?.cooldown ?? 1);
+    this.homeX = x;
     this.homeY = y;
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -67,7 +77,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setCollideWorldBounds(true);
     this.setDepth(DEPTH.enemies);
     if (def.tint) this.setTint(hex(def.tint));
-    if (def.movement === 'fly') this.body.setAllowGravity(false);
+    if (isFlying(def)) this.body.setAllowGravity(false);
     if (def.movement === 'stationary') this.body.setImmovable(true);
     this.bar = def.healthBar ? scene.add.graphics().setDepth(DEPTH.enemies + 1) : null;
     this.play(enemyAnimKey(def.sprite, 'move'));
@@ -130,7 +140,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const body = this.body;
     if (this.status.stunned) {
       body.setVelocityX(0);
-      if (this.def.movement === 'fly') body.setVelocityY(0);
+      if (isFlying(this.def)) body.setVelocityY(0);
       this.anims.pause();
       this.drawHealthBar();
       return;
@@ -155,7 +165,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       attackReady: this.attackCooldown.ready,
     });
     if (this.ai === 'attack' && previous !== 'attack') {
-      this.attackTime = ATTACK_TIME;
+      const telegraph = this.def.attack?.telegraph ?? 0;
+      this.windup = telegraph;
+      this.windupClock = 0;
+      this.attackTarget = { x: target.x, y: target.y };
+      this.attackTime = telegraph + (this.def.attack?.kind === 'lunge' ? LUNGE_TIME : ATTACK_TIME);
       this.attacked = false;
     }
 
@@ -164,15 +178,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     switch (this.ai) {
       case 'hurt':
         body.setVelocityX(body.velocity.x * 0.9);
-        if (this.def.movement === 'fly') body.setVelocityY(0);
+        if (isFlying(this.def)) body.setVelocityY(0);
         break;
       case 'attack':
         this.direction = toward;
-        this.performAttack(target, slow);
+        if (this.windup > 0) {
+          // Warning phase: hold still and flash red so the player can read the attack.
+          this.windup = Math.max(0, this.windup - step);
+          this.windupClock += dt;
+          body.setVelocity(0, isFlying(this.def) ? 0 : body.velocity.y);
+          if (telegraphOn(this.windupClock)) this.setTintFill(0xff4a4a);
+          else this.restoreTint();
+          if (this.windup > 0) break;
+          this.restoreTint();
+        }
+        this.performAttack(this.def.movement === 'hover' ? this.attackTarget : target, slow);
         break;
       case 'chase':
         this.direction = toward;
-        if (this.def.movement === 'fly') {
+        if (this.def.movement === 'hover' && this.def.patrol) {
+          const v = leashedChase({ x: this.x, y: this.y }, { x: target.x, y: target.y }, { x: this.homeX, y: this.homeY }, this.def.patrol, speed);
+          body.setVelocity(v.vx, v.vy);
+        } else if (isFlying(this.def)) {
           const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
           body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
         } else {
@@ -180,7 +207,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         break;
       case 'patrol':
-        this.patrol(speed);
+        if (this.def.movement === 'hover' && this.def.patrol) {
+          const v = hoverPatrol({ x: this.x, y: this.y }, { x: this.homeX, y: this.homeY }, this.def.patrol, speed, this.patrolDir, this.elapsed);
+          this.patrolDir = v.dir;
+          this.direction = v.dir;
+          body.setVelocity(v.vx, v.vy);
+        } else this.patrol(speed);
         break;
       case 'idle':
         body.setVelocityX(0);
@@ -227,9 +259,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (attack.kind === 'hop') {
       if (!body.blocked.down) return;
       body.setVelocity(this.direction * Math.max(this.def.speed, 40) * slow, -attack.power * Math.sqrt(slow));
+    } else if (attack.kind === 'lunge') {
+      // Dash through the player's position; contact damage does the rest.
+      const v = lungeVelocity({ x: this.x, y: this.y }, { x: target.x, y: target.y }, attack.power * slow);
+      body.setVelocity(v.vx, v.vy);
     } else {
       body.setVelocityX(0);
-      const angle = this.def.movement === 'fly' ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.direction > 0 ? 0 : Math.PI;
+      const angle = isFlying(this.def) ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.direction > 0 ? 0 : Math.PI;
       this.host.enemyShoot(this, Math.cos(angle) * attack.power, Math.sin(angle) * attack.power, attack.damage);
     }
     this.attacked = true;

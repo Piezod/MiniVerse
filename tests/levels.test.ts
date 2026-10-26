@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BIOMES } from '../src/games/platformer/biomes';
+import { BIOMES, BIOME_VARIANTS } from '../src/games/platformer/biomes';
 import { type LevelEntry, LevelManager, memoryStorage } from '../src/games/platformer/level/LevelManager';
 import { analyzeReachability, validateLevel } from '../src/games/platformer/level/LevelValidator';
 import { parseLevel, type LevelData } from '../src/games/platformer/level/LevelParser';
@@ -41,13 +41,13 @@ describe('campaign levels (public/assets/platformer/levels)', () => {
   });
 
   it.each(registry.levels)('%s is valid and completable without abilities', (file) => {
-    const result = validateLevel(load(file), BIOME_IDS, ENEMIES);
+    const result = validateLevel(load(file), BIOME_IDS, ENEMIES, BIOME_VARIANTS);
     expect(result.issues.filter((i) => i.severity === 'error')).toEqual([]);
     expect(result.ok).toBe(true);
   });
 
   it('introduces new enemy behaviours level by level (configured in JSON)', () => {
-    const defsPerLevel = registry.levels.map((f) => parseLevel(load(f) as LevelData).enemies.map((e) => ENEMIES[e.type]));
+    const defsPerLevel = registry.levels.filter((f) => !f.includes('/')).map((f) => parseLevel(load(f) as LevelData).enemies.map((e) => ENEMIES[e.type]));
     const [l1, l2, l3, l4] = defsPerLevel;
     expect(l1.every((e) => e.maxHealth === 1 && !e.attack)).toBe(true);
     expect(l2.some((e) => e.speed > ENEMIES.walker.speed) && l2.some((e) => e.maxHealth > 1)).toBe(true);
@@ -63,7 +63,8 @@ describe('campaign levels (public/assets/platformer/levels)', () => {
   });
 
   it('ramps up difficulty (floor gaps + 3 x enemies never decreases)', () => {
-    const scores = registry.levels.map((f) => {
+    // the ramp applies to the original linear levels; chapter episodes (subfolders) have their own pacing
+    const scores = registry.levels.filter((f) => !f.includes('/')).map((f) => {
       const parsed = parseLevel(load(f) as LevelData);
       const floor = parsed.terrain[parsed.height - 1];
       const gaps = floor.filter((cell) => !cell).length;

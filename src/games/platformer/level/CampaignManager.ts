@@ -30,6 +30,37 @@ export interface ChapterDef {
   status: ChapterStatus;
   /** Levels the finished chapter will have (planned chapters only). */
   plannedLevels: number;
+  /** Episodes of the chapter in play order: planned ids, titles and visual variant (metadata, see EpisodeDef). */
+  episodes: EpisodeDef[];
+}
+
+/**
+ * An episode is a level of the chapter. In a planned chapter it is only metadata (its `id` is the id the
+ * level file will have); once the chapter is ready, `episodes` must match `levels` one to one.
+ */
+export interface EpisodeDef {
+  id: string;
+  title: string;
+  summary: string;
+  /** Biome variant the level uses (must exist in the chapter's biome). */
+  variant: string | null;
+  /** Boss enemy id from enemies.json (checked once the chapter is playable). */
+  boss: string | null;
+}
+
+export interface CampaignCharacter {
+  name: string;
+  role: string;
+  description: string;
+}
+
+/** Story metadata of the whole campaign (title, synopsis and cast), for menus and future dialogues. */
+export interface CampaignMeta {
+  id: string;
+  title: string;
+  synopsis: string;
+  protagonist: string | null;
+  characters: Record<string, CampaignCharacter>;
 }
 
 export interface CampaignIssue {
@@ -38,8 +69,12 @@ export interface CampaignIssue {
 }
 
 export interface CampaignContext {
-  levels: ReadonlyArray<Pick<LevelEntry, 'id' | 'biome'> & { validation: { ok: boolean } }>;
+  levels: ReadonlyArray<Pick<LevelEntry, 'id' | 'biome'> & { validation: { ok: boolean }; data?: { variant?: string } | null }>;
   biomes: readonly string[];
+  /** Variant ids per biome (biomes/index.ts BIOME_VARIANTS), to validate episode variants. */
+  variants?: Readonly<Record<string, readonly string[]>>;
+  /** Enemy catalog, to validate boss ids of playable chapters. */
+  enemies?: Readonly<Record<string, { boss: boolean }>>;
   /** Ability ids with their number of levels (for rewards). */
   abilities?: Readonly<Record<string, { levels: readonly unknown[] }>>;
 }
@@ -47,19 +82,40 @@ export interface CampaignContext {
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 
+function parseMeta(raw: unknown, issues: CampaignIssue[]): CampaignMeta | null {
+  if (raw === undefined || raw === null) return null;
+  const bad = (message: string): null => (issues.push({ chapter: '*', message: `campaign: ${message}` }), null);
+  if (!isRecord(raw)) return bad('debe ser un objeto');
+  if (typeof raw.id !== 'string' || !ID.test(raw.id)) return bad('"id" debe ser minúsculas, números y guiones');
+  if (typeof raw.title !== 'string' || !raw.title.trim()) return bad('"title" es obligatorio');
+  const characters: Record<string, CampaignCharacter> = {};
+  if (raw.characters !== undefined) {
+    if (!isRecord(raw.characters)) return bad('"characters" debe ser un objeto { id: { name, role, description } }');
+    for (const [key, c] of Object.entries(raw.characters)) {
+      if (!ID.test(key) || !isRecord(c) || typeof c.name !== 'string' || typeof c.role !== 'string') return bad(`personaje "${key}": necesita id válido, "name" y "role"`);
+      characters[key] = { name: c.name, role: c.role, description: typeof c.description === 'string' ? c.description : '' };
+    }
+  }
+  const protagonist = typeof raw.protagonist === 'string' ? raw.protagonist : null;
+  if (protagonist !== null && !characters[protagonist]) return bad(`"protagonist" apunta a un personaje inexistente: ${protagonist}`);
+  return { id: raw.id, title: raw.title, synopsis: typeof raw.synopsis === 'string' ? raw.synopsis : '', protagonist, characters };
+}
+
 /**
  * Validates campaign.json. A chapter with errors becomes `broken` (listed, never playable) instead of
  * stopping the game; `planned` chapters declare no levels so nothing refers to missing files.
  */
-export function buildCampaign(raw: unknown, ctx: CampaignContext): { chapters: ChapterDef[]; issues: CampaignIssue[] } {
+export function buildCampaign(raw: unknown, ctx: CampaignContext): { chapters: ChapterDef[]; issues: CampaignIssue[]; meta: CampaignMeta | null } {
   const issues: CampaignIssue[] = [];
   const chapters: ChapterDef[] = [];
-  if (!isRecord(raw) || !Array.isArray(raw.chapters)) return { chapters, issues: [{ chapter: '*', message: 'campaign.json necesita "chapters": []' }] };
+  if (!isRecord(raw) || !Array.isArray(raw.chapters)) return { chapters, issues: [{ chapter: '*', message: 'campaign.json necesita "chapters": []' }], meta: null };
+  const meta = parseMeta(raw.campaign, issues);
 
   const levelById = new Map(ctx.levels.map((l) => [l.id, l]));
   const seenIds = new Set<string>();
   const seenOrders = new Set<number>();
   const owner = new Map<string, string>();
+  const episodeIds = new Map<string, string>();
 
   raw.chapters.forEach((entry, i) => {
     const id = isRecord(entry) && typeof entry.id === 'string' ? entry.id : `#${i}`;
@@ -122,6 +178,36 @@ export function buildCampaign(raw: unknown, ctx: CampaignContext): { chapters: C
         }
     }
 
+    const episodes: EpisodeDef[] = [];
+    if (entry.episodes !== undefined) {
+      if (!Array.isArray(entry.episodes)) errors.push('"episodes" debe ser una lista');
+      else
+        entry.episodes.forEach((e, n) => {
+          const at = `episodes[${n}]`;
+          if (!isRecord(e) || typeof e.id !== 'string' || !ID.test(e.id)) return void errors.push(`${at}: "id" debe ser un id de nivel (minúsculas, números y guiones)`);
+          if (typeof e.title !== 'string' || !e.title.trim()) errors.push(`${at} "${e.id}": "title" es obligatorio`);
+          if (e.variant != null && typeof e.variant !== 'string') errors.push(`${at} "${e.id}": "variant" debe ser texto`);
+          if (e.boss != null && typeof e.boss !== 'string') errors.push(`${at} "${e.id}": "boss" debe ser un id de enemigo`);
+          const variant = typeof e.variant === 'string' ? e.variant : null;
+          const boss = typeof e.boss === 'string' ? e.boss : null;
+          const known = biome !== null ? ctx.variants?.[biome] : undefined;
+          if (variant && biome === null) errors.push(`${at} "${e.id}": "variant" necesita un "biome" principal en el capítulo`);
+          else if (variant && known && !known.includes(variant)) errors.push(`${at} "${e.id}": la variante "${variant}" no existe en el bioma "${biome}" (${known.join(', ') || 'sin variantes'})`);
+          if (episodeIds.has(e.id)) errors.push(`${at}: el id "${e.id}" ya lo usa el capítulo "${episodeIds.get(e.id)}"`);
+          else episodeIds.set(e.id, id);
+          if (planned && levelById.has(e.id)) errors.push(`${at}: "${e.id}" ya existe como nivel registrado; quita "planned" y lista los niveles`);
+          if (!planned && levelById.has(e.id) && !levels.includes(e.id)) errors.push(`${at}: el nivel "${e.id}" está registrado pero no figura en "levels" del capítulo`);
+          if (!planned && boss && levelById.has(e.id) && ctx.enemies && !ctx.enemies[boss]?.boss) errors.push(`${at} "${e.id}": "${boss}" no es un jefe de enemies.json`);
+          const level = levelById.get(e.id);
+          if (!planned && variant && level && (level.data?.variant ?? null) !== variant) errors.push(`${at}: el nivel "${e.id}" no usa la variante "${variant}"`);
+          episodes.push({ id: e.id, title: typeof e.title === 'string' ? e.title : e.id, summary: typeof e.summary === 'string' ? e.summary : '', variant, boss });
+        });
+    }
+    if (planned && episodes.length > 0 && episodes.length !== plannedLevels) errors.push(`"plannedLevels" (${plannedLevels}) debe coincidir con el número de episodios (${episodes.length})`);
+    if (!planned && episodes.length > 0 && (levels.length > episodes.length || episodes.slice(0, levels.length).some((e, n) => e.id !== levels[n]))) {
+      errors.push('"levels" debe ser el principio de "episodes", en orden (los episodios sin nivel quedan como Próximamente)');
+    }
+
     errors.forEach((message) => issues.push({ chapter: id, message }));
     chapters.push({
       id,
@@ -134,6 +220,7 @@ export function buildCampaign(raw: unknown, ctx: CampaignContext): { chapters: C
       rewards,
       status: errors.length ? 'broken' : planned ? 'planned' : 'ready',
       plannedLevels,
+      episodes,
     });
   });
 
@@ -158,7 +245,7 @@ export function buildCampaign(raw: unknown, ctx: CampaignContext): { chapters: C
   for (const level of ctx.levels) {
     if (level.validation.ok && !owner.has(level.id)) issues.push({ chapter: '*', message: `el nivel "${level.id}" no pertenece a ningún capítulo jugable` });
   }
-  return { chapters, issues };
+  return { chapters, issues, meta };
 }
 
 export interface ChapterProgress {
@@ -169,6 +256,14 @@ export interface ChapterProgress {
   unlocked: boolean;
   isCompleted: boolean;
   status: ChapterStatus;
+}
+
+export interface EpisodeInfo {
+  episode: EpisodeDef;
+  /** Loaded level (ready chapters only). */
+  level: LevelEntry | undefined;
+  playable: boolean;
+  completed: boolean;
 }
 
 export interface CompletionResult {
@@ -190,6 +285,8 @@ export class CampaignManager {
   constructor(
     chapters: readonly ChapterDef[],
     private readonly levels: LevelManager,
+    /** Story metadata from campaign.json (null when absent). */
+    readonly meta: CampaignMeta | null = null,
   ) {
     this.chapters = chapters;
     for (const chapter of chapters) {
@@ -228,9 +325,10 @@ export class CampaignManager {
     return this.levels.best(levelId);
   }
 
+  /** A chapter is complete when every episode is published and completed (a partial chapter never is). */
   isChapterCompleted(chapterId: string): boolean {
     const chapter = this.byId.get(chapterId);
-    return chapter?.status === 'ready' && chapter.levels.every((id) => this.levels.isCompleted(id));
+    return chapter?.status === 'ready' && chapter.episodes.length <= chapter.levels.length && chapter.levels.every((id) => this.levels.isCompleted(id));
   }
 
   isChapterUnlocked(chapterId: string): boolean {
@@ -256,7 +354,7 @@ export class CampaignManager {
     const entries = ids.map((id) => this.levels.get(id));
     return {
       completed: ids.filter((id) => this.levels.isCompleted(id)).length,
-      total: ids.length || (chapter?.plannedLevels ?? 0),
+      total: chapter?.status === 'ready' ? Math.max(ids.length, chapter.episodes.length) : ids.length || (chapter?.plannedLevels ?? 0),
       stars: ids.reduce((sum, id) => sum + (this.levels.best(id)?.stars ?? 0), 0),
       starsTotal: entries.reduce((sum, e) => sum + (e?.validation.parsed?.stars.length ?? 0), 0),
       unlocked: this.isChapterUnlocked(chapterId),
@@ -269,6 +367,19 @@ export class CampaignManager {
   nextChapter(chapterId: string): ChapterDef | undefined {
     const index = this.chapters.findIndex((c) => c.id === chapterId);
     return index < 0 ? undefined : this.chapters.slice(index + 1).find((c) => c.status === 'ready');
+  }
+
+  /**
+   * Episodes of a chapter with their state. In a planned chapter they are announced only (`level` is
+   * undefined and nothing is playable); in a ready chapter they follow the level unlocking rules.
+   */
+  episodesOf(chapterId: string): EpisodeInfo[] {
+    const chapter = this.byId.get(chapterId);
+    if (!chapter) return [];
+    return chapter.episodes.map((episode) => {
+      const level = chapter.status === 'ready' ? this.levels.get(episode.id) : undefined;
+      return { episode, level, playable: !!level && this.isLevelUnlocked(episode.id), completed: !!level && this.levels.isCompleted(episode.id) };
+    });
   }
 
   /** Next level inside the same chapter (never crosses chapters). */

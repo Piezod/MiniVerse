@@ -259,8 +259,14 @@ export const DECO = {
   roots: 13,
   sign: 14,
   bush: 15,
+  emergency: 16,
+  console: 17,
+  capsule: 18,
+  container: 19,
+  alienTech: 20,
+  wallPanel: 21,
 } as const;
-export const DECO_FRAME_COUNT = 16;
+export const DECO_FRAME_COUNT = 22;
 
 function blade(ctx: Ctx, x: number, height: number, lean: number, base: string, tip: string): void {
   for (let i = 0; i < height; i++) {
@@ -378,6 +384,56 @@ export function decorationDrawer(p: BiomePalette, s: BiomeStyle) {
         px(ctx, p.berry, 12, 13, 1, 1);
         px(ctx, p.berry, 7, 13, 1, 1);
         px(ctx, p.surfaceShadow, 1, 15, 14, 1);
+        break;
+      case 16:
+        px(ctx, p.rockDeep, 2, 2, 12, 14);
+        px(ctx, '#fb6258', 3, 3, 10, 2);
+        px(ctx, p.accent2, 7, 7, 2, 4);
+        px(ctx, p.accent2, 7, 13, 2, 1);
+        px(ctx, p.rockLight, 3, 15, 10, 1);
+        break;
+      case 17:
+        px(ctx, p.rockDark, 2, 3, 12, 9);
+        px(ctx, p.rockLight, 2, 3, 12, 1);
+        px(ctx, p.rockDeep, 4, 5, 8, 4);
+        px(ctx, p.accent, 5, 6, 5, 1);
+        px(ctx, p.accent, 5, 8, 3, 1);
+        px(ctx, p.accent2, 11, 10, 1, 1);
+        px(ctx, p.rock, 6, 12, 4, 4);
+        px(ctx, p.rockLight, 3, 15, 10, 1);
+        break;
+      case 18:
+        px(ctx, p.rockLight, 3, 1, 9, 15);
+        px(ctx, p.rockDark, 4, 2, 7, 13);
+        px(ctx, p.rockDeep, 5, 3, 5, 10);
+        px(ctx, p.accent, 4, 3, 1, 8);
+        px(ctx, p.rock, 5, 13, 6, 2);
+        px(ctx, p.rockLight, 12, 7, 2, 9);
+        px(ctx, '#fb6258', 7, 1, 2, 1);
+        break;
+      case 19:
+        px(ctx, p.rockDark, 1, 5, 14, 11);
+        px(ctx, p.rockLight, 1, 5, 14, 2);
+        px(ctx, p.rock, 3, 8, 10, 6);
+        px(ctx, p.rockDeep, 7, 8, 2, 6);
+        for (let stripe = 0; stripe < 4; stripe++) px(ctx, stripe % 2 ? p.rockDeep : p.accent2, 2 + stripe * 3, 14, 3, 2);
+        break;
+      case 20:
+        px(ctx, p.rockDeep, 2, 13, 12, 3);
+        px(ctx, '#58d89c', 4, 9, 3, 5);
+        px(ctx, '#a5f5bc', 5, 5, 1, 7);
+        px(ctx, '#58d89c', 9, 6, 3, 8);
+        px(ctx, '#a5f5bc', 10, 3, 1, 7);
+        px(ctx, '#071c21', 6, 10, 4, 2);
+        px(ctx, '#fb6258', 12, 14, 2, 1);
+        break;
+      case 21:
+        px(ctx, p.rockDark, 1, 2, 14, 14);
+        px(ctx, p.rockLight, 1, 2, 14, 1);
+        px(ctx, p.rockDeep, 3, 5, 10, 7);
+        for (let vent = 0; vent < 3; vent++) px(ctx, p.rock, 4, 6 + vent * 2, 6, 1);
+        px(ctx, '#fb6258', 3, 14, 2, 1);
+        px(ctx, p.accent, 11, 14, 2, 1);
         break;
     }
     hardenAlpha(ctx, w, h);
