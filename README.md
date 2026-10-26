@@ -7,12 +7,37 @@ Plataforma de minijuegos 2D para móvil y PC con Phaser 3, TypeScript y Vite.
 ```bash
 npm install
 npm run dev        # http://localhost:5173 (también accesible desde el móvil en la misma red)
-npm run build      # typecheck + build de producción en dist/
-npm run preview    # sirve dist/
+npm test           # pruebas automáticas (niveles, combate, progreso)
+npm run build      # typecheck + build de producción en dist/ (base /MiniVerse/)
+npm run preview    # sirve dist/ en http://localhost:4173/MiniVerse/
 ```
 
 En VS Code: **F5** (“MiniVerse (Chrome)” o “(Edge)”) arranca Vite y abre el navegador con depuración.
 Añade `?debug` a la URL en desarrollo para ver las cajas de colisión.
+
+## Publicar una nueva versión (GitHub Pages)
+
+Versión pública: **https://piezod.github.io/MiniVerse/**
+
+- `develop`: desarrollo (las ramas `feature/*` se integran aquí). **No se publica.**
+- `main`: versión estable. Cada push o merge a `main` publica automáticamente.
+
+Para publicar:
+
+1. Comprueba en `develop` que todo pasa: `npm test` y `npm run build`.
+2. Integra `develop` en `main` (Pull Request `develop → main` en GitHub, o en local):
+   ```bash
+   git switch main
+   git pull
+   git merge develop
+   git push
+   ```
+3. El workflow [.github/workflows/deploy.yml](.github/workflows/deploy.yml) instala con `npm ci`,
+   ejecuta los tests y el build, y despliega solo `dist/`. Si algo falla, no se publica nada.
+4. Sigue el progreso en la pestaña **Actions**; también se puede relanzar a mano
+   (“Run workflow” sobre `main`).
+
+Las partidas se guardan en el `localStorage` del navegador, por separado para local y para la web publicada.
 
 ## Controles (Aventuras Pixel)
 

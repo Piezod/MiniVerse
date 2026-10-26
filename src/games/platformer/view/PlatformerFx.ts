@@ -16,6 +16,10 @@ export class PlatformerFx {
   private readonly debris: Emitter;
   private readonly burst: Emitter;
   private readonly rising: Emitter;
+  private readonly jetEmitter: Emitter;
+  private readonly flames: Record<-1 | 1, Emitter>;
+  private readonly zap: Emitter;
+  private readonly embers: Emitter;
   private readonly ambient: Emitter[];
 
   constructor(
@@ -72,6 +76,48 @@ export class PlatformerFx {
       blendMode: Phaser.BlendModes.ADD,
     });
     this.ambient = world.ambient.map((def) => this.createAmbient(def));
+
+    const fire = [0xff7a45, 0xffd56b, 0xfff3c4, 0xc84a3a];
+    this.jetEmitter = make({
+      frame: [FX_FRAME.dust, FX_FRAME.square, FX_FRAME.pixel],
+      tint: fire,
+      lifespan: { min: 180, max: 320 },
+      speed: { min: 50, max: 90 },
+      angle: { min: 75, max: 105 },
+      alpha: fade,
+      blendMode: Phaser.BlendModes.ADD,
+    });
+    const flame = (dir: -1 | 1): Emitter =>
+      make({
+        frame: [FX_FRAME.dust, FX_FRAME.square],
+        tint: fire,
+        lifespan: { min: 160, max: 280 },
+        speed: { min: 90, max: 140 },
+        angle: dir > 0 ? { min: -14, max: 14 } : { min: 166, max: 194 },
+        gravityY: -60,
+        alpha: fade,
+        blendMode: Phaser.BlendModes.ADD,
+      });
+    this.flames = { [-1]: flame(-1), 1: flame(1) } as Record<-1 | 1, Emitter>;
+    this.zap = make({
+      frame: [FX_FRAME.square, FX_FRAME.pixel, FX_FRAME.sparkle],
+      tint: [hex(PALETTE.glow), hex(PALETTE.white)],
+      lifespan: { min: 150, max: 300 },
+      speed: { min: 30, max: 80 },
+      angle: { min: 0, max: 360 },
+      alpha: fade,
+      blendMode: Phaser.BlendModes.ADD,
+    });
+    this.embers = make({
+      frame: [FX_FRAME.square, FX_FRAME.pixel],
+      tint: fire,
+      lifespan: { min: 200, max: 400 },
+      speed: { min: 30, max: 80 },
+      angle: { min: 0, max: 360 },
+      gravityY: 120,
+      alpha: fade,
+      blendMode: Phaser.BlendModes.ADD,
+    });
   }
 
   private createAmbient(def: AmbientParticlesDef): Emitter {
@@ -130,6 +176,20 @@ export class PlatformerFx {
   victory(x: number, y: number): void {
     this.rising.explode(30, x, y);
     this.sparkle.explode(24, x, y);
+  }
+
+  /** Jetpack thrust under the feet. */
+  jet(x: number, y: number, amount = 6): void {
+    this.jetEmitter.explode(amount, x, y);
+  }
+
+  /** One frame of flamethrower stream in front of the player. */
+  flame(x: number, y: number, dir: -1 | 1): void {
+    this.flames[dir].explode(3, x, y);
+  }
+
+  impact(x: number, y: number, kind: 'beam' | 'fire'): void {
+    (kind === 'beam' ? this.zap : this.embers).explode(6, x, y);
   }
 
   private flash(x: number, y: number, tint: number, scale: number): void {

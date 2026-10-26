@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { BIOMES } from '../biomes';
+import type { EnemyDef } from '../enemies/EnemyCatalog';
 import { type LevelEntry, LevelManager, localProgressStorage } from './LevelManager';
 import { validateLevel } from './LevelValidator';
 
@@ -22,14 +23,14 @@ export function queueLevels(scene: Phaser.Scene): void {
 }
 
 /** Validates every loaded level file and builds the campaign. Invalid levels are reported and skipped. */
-export function buildLevelManager(scene: Phaser.Scene): LevelManager {
+export function buildLevelManager(scene: Phaser.Scene, enemies: Readonly<Record<string, EnemyDef>>): LevelManager {
   const registry = scene.cache.json.get(REGISTRY_KEY) as LevelRegistry | undefined;
   const files = registry?.levels ?? [];
   if (files.length === 0) console.error('[levels] levels.json is missing or empty');
 
   const entries: LevelEntry[] = files.map((file, index) => {
     const raw: unknown = scene.cache.json.get(levelKey(file));
-    const validation = validateLevel(raw ?? null, Object.keys(BIOMES));
+    const validation = validateLevel(raw ?? null, Object.keys(BIOMES), enemies);
     for (const issue of validation.issues) {
       (issue.severity === 'error' ? console.error : console.warn)(`[levels] ${file}: ${issue.message}`);
     }

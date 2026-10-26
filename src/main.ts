@@ -25,6 +25,8 @@ const game = new Phaser.Game({
     arcade: { debug: import.meta.env.DEV && new URLSearchParams(window.location.search).has('debug') },
   },
   input: { activePointers: 3 },
+  // Relative asset paths ('assets/...') resolve against the deploy base ('/' locally, '/MiniVerse/' on Pages).
+  loader: { baseURL: import.meta.env.BASE_URL },
   scene: [MainMenuScene],
 });
 

@@ -18,9 +18,11 @@ export const ANIM = {
     land: 'platformer.player.land',
     hurt: 'platformer.player.hurt',
     death: 'platformer.player.death',
-    /** Provided by the skin for future mechanics; not used yet. */
+    /** Provided by the skin; used for abilities when present (shoot -> attack fallback). */
     attack: 'platformer.player.attack',
     dash: 'platformer.player.dash',
+    shoot: 'platformer.player.shoot',
+    jetpack: 'platformer.player.jetpack',
   },
   walker: {
     walk: 'platformer.walker.walk',

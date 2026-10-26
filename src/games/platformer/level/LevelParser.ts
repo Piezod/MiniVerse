@@ -19,8 +19,8 @@ export interface LevelSection {
  * Level file format (JSON). Sections are concatenated left to right; inside a section, rows are
  * aligned to the bottom of the level and short rows are padded with '.'.
  *   .  empty        #  ground                          X  block         =  one-way platform
- *   P  player       S  star                            E  walker enemy  K  checkpoint
- *   O  exit portal  1-9 sign (text in `signs`)
+ *   P  player       S  star                            E  enemy (walker by default)  K  checkpoint
+ *   O  exit portal  1-9 sign (text in `signs`)          other letters: enemies declared in `enemies`
  */
 export interface LevelData {
   id: string;
@@ -30,6 +30,14 @@ export interface LevelData {
   height: number;
   sections: readonly LevelSection[];
   signs?: Readonly<Record<string, SignText>>;
+  /** Map letter -> enemy type id (enemies.json). Overrides the default { "E": "walker" }. */
+  enemies?: Readonly<Record<string, string>>;
+}
+
+export const DEFAULT_ENEMY_LEGEND: Readonly<Record<string, string>> = { E: 'walker' };
+
+export function enemyLegend(level: LevelData): Record<string, string> {
+  return { ...DEFAULT_ENEMY_LEGEND, ...(level.enemies ?? {}) };
 }
 
 export interface ParsedLevel {
@@ -40,13 +48,13 @@ export interface ParsedLevel {
   terrain: Terrain[][];
   spawn: TilePoint | null;
   stars: TilePoint[];
-  enemies: TilePoint[];
+  enemies: Array<TilePoint & { type: string }>;
   checkpoints: TilePoint[];
   portals: TilePoint[];
   signs: Array<TilePoint & { text: SignText }>;
 }
 
-export const LEVEL_CHARS = '.#X=PSEKO';
+export const LEVEL_CHARS = '.#X=PSKO';
 
 /** Builds the full character grid (rows top to bottom). */
 export function buildGrid(level: LevelData): string[] {
@@ -61,6 +69,7 @@ export function buildGrid(level: LevelData): string[] {
 
 export function parseLevel(level: LevelData): ParsedLevel {
   const grid = buildGrid(level);
+  const legend = enemyLegend(level);
   const width = grid[0]?.length ?? 0;
   const result: ParsedLevel = {
     id: level.id,
@@ -98,9 +107,6 @@ export function parseLevel(level: LevelData): ParsedLevel {
         case 'S':
           result.stars.push(point);
           break;
-        case 'E':
-          result.enemies.push(point);
-          break;
         case 'K':
           result.checkpoints.push(point);
           break;
@@ -110,6 +116,7 @@ export function parseLevel(level: LevelData): ParsedLevel {
         default: {
           const sign = level.signs?.[ch];
           if (sign) result.signs.push({ ...point, text: sign });
+          else if (legend[ch]) result.enemies.push({ ...point, type: legend[ch] });
         }
       }
       terrainRow.push(terrain);

@@ -98,6 +98,10 @@ export class LevelManager {
     return this.progress.best[id];
   }
 
+  isCompleted(id: string): boolean {
+    return this.progress.best[id] !== undefined;
+  }
+
   /** Records a completed level, keeps the best star count and unlocks the next level. */
   complete(id: string, result: LevelResult): LevelEntry | undefined {
     const previous = this.progress.best[id];
