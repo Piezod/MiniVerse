@@ -1,0 +1,42 @@
+{
+  "jetpack": {
+    "name": "Propulsion",
+    "description": "Doble salto. Manten el salto para planear",
+    "module": "jetpack",
+    "slot": "passive",
+    "icon": 0,
+    "requires": "forest-1",
+    "levels": [
+      { "cost": 12, "energy": 0, "cooldown": 0, "params": { "extraJumps": 1, "jumpVelocity": 270, "glideTime": 0.6, "glideFallSpeed": 55 } },
+      { "cost": 25, "energy": 0, "cooldown": 0, "params": { "extraJumps": 1, "jumpVelocity": 300, "glideTime": 1.2, "glideFallSpeed": 40 } }
+    ],
+    "assets": { "icon": 0, "fx": "jet", "anim": "jetpack" }
+  },
+  "beam": {
+    "name": "Rayo de energia",
+    "description": "Disparo horizontal de energia",
+    "module": "projectile",
+    "slot": "active",
+    "icon": 1,
+    "requires": null,
+    "levels": [
+      { "cost": 8, "energy": 15, "cooldown": 0.45, "params": { "damage": 1, "range": 150, "speed": 260 } },
+      { "cost": 18, "energy": 12, "cooldown": 0.3, "params": { "damage": 1.5, "range": 190, "speed": 300 } },
+      { "cost": 30, "energy": 10, "cooldown": 0.25, "params": { "damage": 2, "range": 220, "speed": 320 } }
+    ],
+    "assets": { "icon": 1, "projectile": "beam", "anim": "shoot" }
+  },
+  "flamethrower": {
+    "name": "Lanzallamas",
+    "description": "Llamas cercanas: mas dano cuanto mas tiempo",
+    "module": "flamethrower",
+    "slot": "active",
+    "icon": 2,
+    "requires": "ruins-1",
+    "levels": [
+      { "cost": 20, "energy": 40, "cooldown": 0, "params": { "range": 34, "height": 14, "tick": 0.12, "baseDamage": 0.2, "rampPerSecond": 0.6, "maxDamage": 0.8 } },
+      { "cost": 35, "energy": 32, "cooldown": 0, "params": { "range": 44, "height": 16, "tick": 0.1, "baseDamage": 0.3, "rampPerSecond": 0.8, "maxDamage": 1.2 } }
+    ],
+    "assets": { "icon": 2, "fx": "flame", "anim": "shoot" }
+  }
+}

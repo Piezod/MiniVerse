@@ -8,6 +8,7 @@ import { BIOMES } from '../biomes';
 import { PlatformerScenes } from '../config';
 import { startLevel } from '../level/levelFlow';
 import { getLevelManager } from '../level/levelLoader';
+import { getGameData } from '../progression/gameData';
 
 const CARD_W = 68;
 const CARD_H = 84;
@@ -39,6 +40,12 @@ export class PlatformerLevelSelectScene extends Phaser.Scene {
     pixelText(this, 20, 12, '< MENU').setOrigin(0.5);
     back.on('pointerup', () => exitToMenu(this));
 
+    const shop = this.add.rectangle(GAME_WIDTH - 24, 12, 40, 14, 0x4a3f8a).setStrokeStyle(1, hex(PALETTE.gold)).setInteractive({ useHandCursor: true });
+    pixelText(this, GAME_WIDTH - 24, 12, 'TIENDA', hex(PALETTE.goldLight)).setOrigin(0.5);
+    shop.on('pointerup', () => this.openShop());
+    this.add.image(GAME_WIDTH - 38, 26, TEX.ui, UI_FRAME.star);
+    pixelText(this, GAME_WIDTH - 32, 26, String(getGameData().profile.balance), hex(PALETTE.goldLight)).setOrigin(0, 0.5);
+
     const levels = manager.levels;
     const rowsCount = Math.ceil(levels.length / PER_ROW);
     levels.forEach((_entry, i) => {
@@ -58,6 +65,7 @@ export class PlatformerLevelSelectScene extends Phaser.Scene {
     keyboard?.on('keydown-ENTER', () => this.play(this.selected));
     keyboard?.on('keydown-SPACE', () => this.play(this.selected));
     keyboard?.on('keydown-ESC', () => exitToMenu(this));
+    keyboard?.on('keydown-T', () => this.openShop());
 
     const latest = manager.latestUnlocked();
     this.select(latest ? latest.index : 0);
@@ -93,6 +101,10 @@ export class PlatformerLevelSelectScene extends Phaser.Scene {
       this.play(index);
     });
     this.cards.push(card);
+  }
+
+  private openShop(): void {
+    this.scene.start(PlatformerScenes.Shop);
   }
 
   private drawLock(x: number, y: number): void {
