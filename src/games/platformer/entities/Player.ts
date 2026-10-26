@@ -31,6 +31,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private airSpeed = 0;
   private stepTimer = 0;
   private landing = false;
+  private jumped = false;
+  private actionTime = 0;
   /** True when the art faces left, so flipping is inverted. */
   private readonly artFacesLeft: boolean;
 
@@ -70,11 +72,49 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.visual.flipX !== this.artFacesLeft ? -1 : 1;
   }
 
+  /** True during the frame in which the regular (ground/coyote) jump happened. */
+  get jumpedThisFrame(): boolean {
+    return this.jumped;
+  }
+
+  /** Whether the regular jump is still available (on ground or within coyote time). */
+  get canGroundJump(): boolean {
+    return this.coyote > 0;
+  }
+
+  /** Extra jump triggered by abilities (e.g. jetpack). */
+  airJump(velocity: number): void {
+    this.body.setVelocityY(-velocity);
+    this.jumpBuffer = 0;
+    this.squash(0.8, 1.2, 160);
+  }
+
+  /** Plays the first existing animation of `keys` for `ms`, overriding movement animations. */
+  playAction(keys: readonly string[], ms: number): void {
+    const key = keys.find((k) => this.scene.anims.exists(k));
+    if (!key || this.mode !== 'alive') return;
+    this.landing = false;
+    this.actionTime = ms / 1000;
+    this.visual.anims.timeScale = 1;
+    this.visual.play(key, true);
+  }
+
+  /** Non-lethal hit: knockback, short hurt animation and temporary invulnerability. */
+  hurt(fromX: number): void {
+    if (this.mode !== 'alive') return;
+    const dir = this.x < fromX ? -1 : 1;
+    this.body.setVelocity(dir * 140, -180);
+    this.invulnerable = T.invulnerableTime;
+    this.playAction([ANIM.player.hurt], 300);
+  }
+
   update(input: ActionInput<PlatformerAction>, delta: number): void {
     if (this.mode !== 'alive') return;
     const dt = delta / 1000;
     const body = this.body;
     const onGround = body.blocked.down;
+    this.jumped = false;
+    this.actionTime = Math.max(0, this.actionTime - dt);
 
     const dir = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
     const rate = dir === 0 && onGround ? T.groundDecel : onGround ? T.groundAccel : T.airAccel;
@@ -99,6 +139,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       body.setVelocityY(-T.jumpVelocity);
       this.jumpBuffer = 0;
       this.coyote = 0;
+      this.jumped = true;
       playSound(this.scene, AUDIO.jump);
       this.emit(PlayerEvent.Jump);
       this.squash(0.75, 1.25, 180);
@@ -123,6 +164,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // The landing animation plays to the end unless the player jumps or starts running.
     if (this.landing && (!onGround || Math.abs(body.velocity.x) > 15 || !anims.isPlaying)) this.landing = false;
     if (this.landing) return;
+    if (this.actionTime > 0) return;
     if (!onGround) {
       anims.play(body.velocity.y < 0 ? ANIM.player.jump : ANIM.player.fall, true);
       anims.timeScale = 1;

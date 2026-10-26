@@ -3,8 +3,9 @@
  * Besides structure, it simulates the player's real jump physics over the tile grid to find every
  * reachable spot, so unreachable goals and impossible jumps are reported before playing.
  */
+import type { EnemyDef } from '../enemies/EnemyCatalog';
 import { GRAVITY, PLAYER_BODY, PLAYER_TUNING } from '../physics';
-import { LEVEL_CHARS, type LevelData, type ParsedLevel, parseLevel, type TilePoint } from './LevelParser';
+import { DEFAULT_ENEMY_LEGEND, LEVEL_CHARS, type LevelData, type ParsedLevel, parseLevel, type TilePoint } from './LevelParser';
 import { TILE_SIZE as T } from './tileset';
 
 export interface ValidationIssue {
@@ -29,13 +30,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function validateLevel(raw: unknown, knownBiomes: readonly string[]): ValidationResult {
+/** `knownEnemies` (from enemies.json) is optional so structure can be checked without it. */
+export function validateLevel(raw: unknown, knownBiomes: readonly string[], knownEnemies?: Readonly<Record<string, EnemyDef>>): ValidationResult {
   const issues: ValidationIssue[] = [];
   const error = (message: string): void => void issues.push({ severity: 'error', message });
   const warn = (message: string): void => void issues.push({ severity: 'warning', message });
 
   if (!isRecord(raw)) return { ok: false, issues: [{ severity: 'error', message: 'El nivel no es un objeto JSON' }] };
-  const { id, name, biome, height, sections, signs } = raw;
+  const { id, name, biome, height, sections, signs, enemies } = raw;
   if (typeof id !== 'string' || !ID_PATTERN.test(id)) error('"id" debe ser texto en minúsculas, números y guiones');
   if (typeof name !== 'string' || !name.trim()) error('"name" es obligatorio');
   if (typeof biome !== 'string' || !knownBiomes.includes(biome)) error(`"biome" debe ser uno de: ${knownBiomes.join(', ')}`);
@@ -52,6 +54,19 @@ export function validateLevel(raw: unknown, knownBiomes: readonly string[]): Val
         }
       }
   }
+  const legend: Record<string, string> = { ...DEFAULT_ENEMY_LEGEND };
+  if (enemies !== undefined) {
+    if (!isRecord(enemies)) error('"enemies" debe ser un objeto { letra: tipo }');
+    else
+      for (const [letter, type] of Object.entries(enemies)) {
+        if (!/^[A-Z]$/.test(letter) || LEVEL_CHARS.includes(letter)) error(`Enemigo "${letter}": usa una letra mayúscula no reservada (${LEVEL_CHARS})`);
+        else if (typeof type !== 'string') error(`Enemigo "${letter}": el tipo debe ser texto`);
+        else legend[letter] = type;
+      }
+  }
+  if (knownEnemies) {
+    for (const [letter, type] of Object.entries(legend)) if (!knownEnemies[type]) error(`Enemigo "${letter}": tipo desconocido "${type}"`);
+  }
   if (!Array.isArray(sections) || sections.length === 0) error('"sections" debe ser una lista no vacía');
   else
     sections.forEach((section, i) => {
@@ -60,7 +75,7 @@ export function validateLevel(raw: unknown, knownBiomes: readonly string[]): Val
         return;
       }
       if (typeof height === 'number' && section.rows.length > height) error(`Sección ${i + 1}: tiene más filas (${section.rows.length}) que "height"`);
-      const allowed = LEVEL_CHARS + Object.keys(isRecord(signs) ? signs : {}).join('');
+      const allowed = LEVEL_CHARS + Object.keys(isRecord(signs) ? signs : {}).join('') + Object.keys(legend).join('');
       (section.rows as string[]).forEach((row, r) => {
         const bad = [...row].find((ch) => !allowed.includes(ch));
         if (bad) error(`Sección ${i + 1}, fila ${r + 1}: carácter no válido "${bad}"`);
@@ -89,6 +104,7 @@ export function validateLevel(raw: unknown, knownBiomes: readonly string[]): Val
   parsed.portals.forEach((p) => needsGround('La meta', p));
   parsed.checkpoints.forEach((p) => needsGround('El checkpoint', p));
   parsed.enemies.forEach((p) => {
+    if (knownEnemies?.[p.type]?.movement === 'fly') return;
     if (!supportAt(p.col, p.row + 1)) warn(`El enemigo ${label(p)} no tiene suelo debajo y caerá`);
   });
   if (issues.some((i) => i.severity === 'error') || !parsed.spawn) return { ok: false, issues, level, parsed };

@@ -4,11 +4,13 @@ import { registerAnimations } from '../../../core/animation/AnimationRegistry';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../../core/config';
 import { ensurePixelFont } from '../../../core/ui/pixelFont';
 import { PLATFORMER_ANIMS } from '../assets/animations';
+import { ENEMY_ANIMS, PROJECTILE_ANIMS } from '../assets/enemySprites';
 import { queueHeroSkin, registerHeroSkin } from '../assets/heroSkin';
 import { PLATFORMER_ASSETS } from '../assets/manifest';
 import { BIOMES } from '../biomes';
 import { PlatformerScenes } from '../config';
 import { buildLevelManager, queueLevels } from '../level/levelLoader';
+import { buildGameData, queueGameData } from '../progression/gameData';
 
 export class PlatformerPreloadScene extends Phaser.Scene {
   static readonly KEY = PlatformerScenes.Preload;
@@ -29,6 +31,7 @@ export class PlatformerPreloadScene extends Phaser.Scene {
     queueAssets(this, PLATFORMER_ASSETS);
     queueHeroSkin(this);
     queueLevels(this);
+    queueGameData(this);
     // Only biome files with a real `url` are downloaded; the rest is generated when a level starts.
     for (const biome of Object.values(BIOMES)) queueAssets(this, biome.assets);
   }
@@ -39,7 +42,10 @@ export class PlatformerPreloadScene extends Phaser.Scene {
     // The hero skin goes first; procedural animations only fill in the keys it doesn't define.
     registerHeroSkin(this);
     registerAnimations(this.anims, PLATFORMER_ANIMS);
-    buildLevelManager(this);
+    registerAnimations(this.anims, ENEMY_ANIMS);
+    registerAnimations(this.anims, PROJECTILE_ANIMS);
+    const data = buildGameData(this);
+    buildLevelManager(this, data.enemies.enemies);
     this.scene.start(PlatformerScenes.LevelSelect);
   }
 }

@@ -10,12 +10,17 @@ import {
   GRAVITY,
   LevelEvent,
   PLATFORMER_BINDINGS,
+  PLAYER_MAX_HP,
   PlatformerScenes,
   START_LIVES,
   type PlatformerAction,
 } from '../config';
 import { Player, PlayerEvent } from '../entities/Player';
-import { Walker } from '../entities/Walker';
+import type { Enemy } from '../entities/Enemy';
+import { AbilitySystem } from '../abilities/AbilitySystem';
+import { CombatSystem } from '../combat/CombatSystem';
+import { Health } from '../combat/damage';
+import { getGameData } from '../progression/gameData';
 import { registerAnimations } from '../../../core/animation/AnimationRegistry';
 import { createMissingPlaceholders } from '../../../core/assets/AssetLoader';
 import { getBiome } from '../biomes';
@@ -60,6 +65,12 @@ export class PlatformerLevelScene extends Phaser.Scene {
   private finished = false;
   private levelId = '';
   private levelName = '';
+  private combat!: CombatSystem;
+  /** Equipped abilities and the energy pool; read by the HUD. */
+  abilities!: AbilitySystem;
+  readonly health = new Health(PLAYER_MAX_HP);
+  private collectedStars: string[] = [];
+  private gateMessageAt = 0;
 
   constructor() {
     super({ key: PlatformerLevelScene.KEY, physics: { arcade: { gravity: { x: 0, y: GRAVITY } } } });
@@ -98,6 +109,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.lives = START_LIVES;
     this.finished = false;
     this.lookAhead = 0;
+    this.collectedStars = [];
+    this.health.reset();
     this.physics.resume();
 
     const { map, layer } = this.createTerrain(level.terrain, biome);
@@ -127,7 +140,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
       const y = tileBottom(p) - TILE_SIZE / 2;
       const glow = this.addGlow(x, y, hex(PALETTE.gold), 0.6, 0.25);
       const star = stars.create(x, y, TEX.star) as Phaser.Physics.Arcade.Sprite;
-      star.setDepth(DEPTH.props).setData('glow', glow).play(ANIM.star).setBodySize(10, 10);
+      star.setDepth(DEPTH.props).setData('glow', glow).setData('key', `${p.col},${p.row}`).play(ANIM.star).setBodySize(10, 10);
       // Visual bob only; the static body stays in place.
       this.tweens.add({ targets: star, y: y - 2, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: (p.col * 97) % 900 });
     }
@@ -138,9 +151,6 @@ export class PlatformerLevelScene extends Phaser.Scene {
       cp.setOrigin(0.5, 1).refreshBody().setDepth(DEPTH.props);
     }
 
-    const enemies = this.add.group({ runChildUpdate: true });
-    for (const p of level.enemies) enemies.add(new Walker(this, tileCenterX(p), tileBottom(p) - 8, layer));
-
     this.respawn.set(tileCenterX(spawn), tileBottom(spawn) - 16);
     this.player = new Player(this, this.respawn.x, this.respawn.y);
     const feet = (): [number, number] => [this.player.visual.x, this.player.visual.y];
@@ -150,8 +160,16 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
     const playerAlive = (): boolean => this.player.isAlive;
     this.physics.add.collider(this.player, layer, undefined, playerAlive);
-    this.physics.add.collider(enemies, layer);
-    this.physics.add.overlap(this.player, enemies, this.onPlayerTouchesEnemy, playerAlive, this);
+    this.combat = new CombatSystem(this, layer, this.player, this.fx, {
+      damagePlayer: (amount, fromX) => this.damagePlayer(amount, fromX),
+      enemyKilled: (enemy) => this.onEnemyKilled(enemy),
+    });
+    const { enemies: catalog, profile } = getGameData();
+    for (const p of level.enemies) {
+      const def = catalog.enemies[p.type];
+      if (def) this.combat.spawnEnemy(def, tileCenterX(p), tileBottom(p));
+    }
+    this.abilities = new AbilitySystem({ scene: this, player: this.player, input: this.controls, combat: this.combat, fx: this.fx }, profile.loadout());
     this.physics.add.overlap(this.player, stars, this.onCollectStar, playerAlive, this);
     this.physics.add.overlap(this.player, checkpoints, this.onCheckpoint, playerAlive, this);
 
@@ -179,6 +197,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.controls.update();
     this.player.update(this.controls, delta);
+    if (!this.finished) this.abilities.update(delta / 1000, this.controls);
+    this.combat.update();
 
     if (this.player.isAlive && Math.abs(this.player.body.velocity.x) > 20) this.lookAhead = this.player.facing * CAMERA_LOOK_AHEAD;
     const camera = this.cameras.main;
@@ -250,19 +270,23 @@ export class PlatformerLevelScene extends Phaser.Scene {
     return glow;
   }
 
-  private onPlayerTouchesEnemy(_player: OverlapTarget, other: OverlapTarget): void {
-    const enemy = other as Walker;
-    if (!enemy.isAlive) return;
-    const body = this.player.body;
-    if (body.velocity.y > 0 && body.bottom <= enemy.body.top + 6) {
-      enemy.stomp();
-      this.player.bounce();
-      this.fx.enemyDefeated(enemy.x, enemy.y);
-      this.cameras.main.shake(90, 0.004);
-      playSound(this, AUDIO.stomp);
-    } else if (!this.player.isInvulnerable) {
+  /** Every source of player damage ends here (contact, projectiles); pits kill directly. */
+  private damagePlayer(amount: number, fromX: number): void {
+    if (!this.player.isAlive || this.player.isInvulnerable || this.finished) return;
+    const result = this.health.apply({ amount, type: 'contact', fromX });
+    this.bus.emit(LevelEvent.Health, this.health.current, this.health.max);
+    if (result.killed) {
       this.killPlayer();
+      return;
     }
+    playSound(this, AUDIO.hurt);
+    this.cameras.main.shake(120, 0.005);
+    this.player.hurt(fromX);
+  }
+
+  private onEnemyKilled(enemy: Enemy): void {
+    this.abilities.energy.restore(enemy.def.reward.energy);
+    if (enemy.def.boss && this.combat.bossesAlive === 0) this.floatText(enemy.x, enemy.y - 40, 'Portal abierto!');
   }
 
   private onCollectStar(_player: OverlapTarget, other: OverlapTarget): void {
@@ -271,6 +295,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.fx.collect(star.x, star.y);
     star.disableBody(true, true);
     this.stars++;
+    this.collectedStars.push(star.getData('key') as string);
     playSound(this, AUDIO.star);
     this.bus.emit(LevelEvent.Stars, this.stars, this.totalStars);
   }
@@ -288,14 +313,22 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
   private onReachPortal(_player: OverlapTarget, portal: OverlapTarget): void {
     if (this.finished) return;
-    this.finished = true;
     const sprite = portal as Phaser.Physics.Arcade.Sprite;
+    if (this.combat.bossesAlive > 0) {
+      if (this.time.now - this.gateMessageAt > 1500) {
+        this.gateMessageAt = this.time.now;
+        this.floatText(sprite.x, sprite.y - 40, 'Derrota al guardian!');
+      }
+      return;
+    }
+    this.finished = true;
     this.fx.victory(sprite.x, sprite.y - 16);
     this.player.freeze();
     this.physics.pause();
     playSound(this, AUDIO.victory);
+    const newStars = getGameData().profile.recordStars(this.levelId, this.collectedStars);
     const next = getLevelManager().complete(this.levelId, { stars: this.stars, total: this.totalStars });
-    this.bus.emit(LevelEvent.Victory, this.stars, this.totalStars, next?.id ?? null);
+    this.bus.emit(LevelEvent.Victory, this.stars, this.totalStars, next?.id ?? null, newStars);
   }
 
   private killPlayer(): void {
@@ -307,6 +340,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
       this.lives--;
       this.bus.emit(LevelEvent.Lives, this.lives);
       if (this.lives > 0) {
+        this.health.reset();
+        this.bus.emit(LevelEvent.Health, this.health.current, this.health.max);
         this.player.respawnAt(this.respawn.x, this.respawn.y);
         this.fx.land(this.player.visual.x, this.player.visual.y, 200);
       } else {

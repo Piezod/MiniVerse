@@ -5,9 +5,15 @@ import { BIOMES } from '../src/games/platformer/biomes';
 import { type LevelEntry, LevelManager, memoryStorage } from '../src/games/platformer/level/LevelManager';
 import { analyzeReachability, validateLevel } from '../src/games/platformer/level/LevelValidator';
 import { parseLevel, type LevelData } from '../src/games/platformer/level/LevelParser';
+import { ENEMY_SPRITES } from '../src/games/platformer/assets/enemySprites';
+import { buildEnemyCatalog } from '../src/games/platformer/enemies/EnemyCatalog';
 
 const LEVELS_DIR = join(__dirname, '../public/assets/platformer/levels');
 const BIOME_IDS = Object.keys(BIOMES);
+const ENEMIES = buildEnemyCatalog(
+  JSON.parse(readFileSync(join(__dirname, '../public/assets/platformer/enemies/enemies.json'), 'utf8')),
+  Object.keys(ENEMY_SPRITES),
+).enemies;
 const registry = JSON.parse(readFileSync(join(LEVELS_DIR, 'levels.json'), 'utf8')) as { levels: string[] };
 const load = (file: string): unknown => JSON.parse(readFileSync(join(LEVELS_DIR, file), 'utf8'));
 
@@ -27,17 +33,27 @@ function level(middle: string[], extra: Partial<LevelData> = {}): LevelData {
   };
 }
 
-const errors = (raw: unknown): string[] => validateLevel(raw, BIOME_IDS).issues.filter((i) => i.severity === 'error').map((i) => i.message);
+const errors = (raw: unknown): string[] => validateLevel(raw, BIOME_IDS, ENEMIES).issues.filter((i) => i.severity === 'error').map((i) => i.message);
 
 describe('campaign levels (public/assets/platformer/levels)', () => {
   it('registers at least three levels', () => {
     expect(registry.levels.length).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(registry.levels)('%s is valid and completable', (file) => {
-    const result = validateLevel(load(file), BIOME_IDS);
+  it.each(registry.levels)('%s is valid and completable without abilities', (file) => {
+    const result = validateLevel(load(file), BIOME_IDS, ENEMIES);
     expect(result.issues.filter((i) => i.severity === 'error')).toEqual([]);
     expect(result.ok).toBe(true);
+  });
+
+  it('introduces new enemy behaviours level by level (configured in JSON)', () => {
+    const defsPerLevel = registry.levels.map((f) => parseLevel(load(f) as LevelData).enemies.map((e) => ENEMIES[e.type]));
+    const [l1, l2, l3, l4] = defsPerLevel;
+    expect(l1.every((e) => e.maxHealth === 1 && !e.attack)).toBe(true);
+    expect(l2.some((e) => e.speed > ENEMIES.walker.speed) && l2.some((e) => e.maxHealth > 1)).toBe(true);
+    expect(l3.some((e) => e.movement === 'fly') && l3.some((e) => e.attack?.kind === 'shoot')).toBe(true);
+    expect(l4.some((e) => e.boss) && l4.some((e) => e.stomp === 'immune')).toBe(true);
+    expect(new Set(l4.map((e) => e.movement)).size).toBeGreaterThanOrEqual(3);
   });
 
   it('uses unique ids and at least three different biomes', () => {
@@ -87,6 +103,9 @@ describe('level validator', () => {
   });
 
   it('detects structural problems', () => {
+    expect(errors(level(['..........', '##########', '##########'], { enemies: { B: 'dragon' } })).join()).toMatch(/tipo desconocido/);
+    expect(errors(level(['..........', '##########', '##########'], { enemies: { S: 'bat' } })).join()).toMatch(/no reservada/);
+    expect(errors(level(['....B.....', '##########', '##########'], { enemies: { B: 'bat' } }))).toEqual([]);
     expect(errors(null).length).toBeGreaterThan(0);
     expect(errors(level(['..........', '##########', '##########'], { biome: 'moon' })).join()).toMatch(/biome/);
     expect(errors(level(['....Z.....', '##########', '##########'])).join()).toMatch(/no válido/);

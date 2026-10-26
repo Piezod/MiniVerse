@@ -1,0 +1,96 @@
+{
+  "walker": {
+    "name": "Musgobot",
+    "sprite": "walker",
+    "maxHealth": 1,
+    "contactDamage": 1,
+    "speed": 28,
+    "movement": "patrol",
+    "stomp": "kill",
+    "reward": { "energy": 10 }
+  },
+  "walker-fast": {
+    "extends": "walker",
+    "name": "Musgobot veloz",
+    "speed": 55,
+    "tint": "#ffb070"
+  },
+  "hopper": {
+    "extends": "walker",
+    "name": "Saltarin",
+    "speed": 34,
+    "tint": "#c8a0ff",
+    "detectRange": 90,
+    "attack": { "kind": "hop", "cooldown": 1.8, "range": 80, "power": 240 }
+  },
+  "shellbot": {
+    "extends": "walker",
+    "name": "Acorazado",
+    "maxHealth": 2,
+    "speed": 32,
+    "stomp": "damage",
+    "tint": "#8fd8ff",
+    "resist": { "beam": 0.5 },
+    "reward": { "energy": 20 }
+  },
+  "bat": {
+    "name": "Murcielago",
+    "sprite": "bat",
+    "maxHealth": 1,
+    "contactDamage": 1,
+    "speed": 42,
+    "movement": "fly",
+    "detectRange": 110,
+    "stomp": "kill",
+    "reward": { "energy": 15 }
+  },
+  "bat-frost": {
+    "extends": "bat",
+    "name": "Murcielago de escarcha",
+    "maxHealth": 2,
+    "speed": 50,
+    "stomp": "damage",
+    "tint": "#b8f4ff",
+    "resist": { "fire": 2 }
+  },
+  "spitter": {
+    "name": "Escupefuego",
+    "sprite": "spitter",
+    "maxHealth": 2,
+    "contactDamage": 1,
+    "speed": 0,
+    "movement": "stationary",
+    "detectRange": 160,
+    "stomp": "damage",
+    "attack": { "kind": "shoot", "cooldown": 2.4, "range": 150, "damage": 1, "power": 90 },
+    "reward": { "energy": 20 }
+  },
+  "golem": {
+    "name": "Golem",
+    "sprite": "golem",
+    "maxHealth": 4,
+    "contactDamage": 1,
+    "speed": 18,
+    "movement": "patrol",
+    "stomp": "immune",
+    "guard": 0.5,
+    "resist": { "fire": 0.5 },
+    "reward": { "energy": 30 }
+  },
+  "magma-king": {
+    "extends": "golem",
+    "name": "Rey de Magma",
+    "maxHealth": 8,
+    "scale": 2,
+    "speed": 26,
+    "movement": "chase",
+    "detectRange": 170,
+    "stomp": "damage",
+    "stompDamage": 1,
+    "tint": "#ffb08a",
+    "resist": { "fire": 0.25 },
+    "attack": { "kind": "shoot", "cooldown": 2.6, "range": 160, "damage": 1, "power": 110 },
+    "boss": true,
+    "reward": { "energy": 100 }
+  }
+}
