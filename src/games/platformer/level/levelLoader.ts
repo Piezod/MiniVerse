@@ -3,6 +3,7 @@ import { BIOME_VARIANTS, BIOMES } from '../biomes';
 import type { EnemyDef } from '../enemies/EnemyCatalog';
 import { buildCampaign, CampaignManager } from './CampaignManager';
 import { type LevelEntry, LevelManager, localProgressStorage } from './LevelManager';
+import { clearSandboxLevels } from './sandboxLevels';
 import { validateLevel } from './LevelValidator';
 
 /** Campaign definition: public/assets/platformer/levels/levels.json lists level files in order. */
@@ -82,4 +83,5 @@ export function releaseLevels(game: Phaser.Game): void {
   game.cache.json.remove(CAMPAIGN_KEY);
   manager = null;
   campaign = null;
+  clearSandboxLevels();
 }

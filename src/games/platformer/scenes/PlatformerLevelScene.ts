@@ -28,6 +28,10 @@ import type { BiomeTheme } from '../biomes/BiomeTheme';
 import type { LevelSceneData } from '../level/levelFlow';
 import { getCampaign, getLevelManager } from '../level/levelLoader';
 import { parseLevel, type TilePoint } from '../level/LevelParser';
+import { getSandboxLevel } from '../level/sandboxLevels';
+import { createDefaultRegistry } from '../objects/builtin';
+import { LevelObjectManager } from '../objects/LevelObjectManager';
+import type { SceneHost } from '../objects/sceneHost';
 import { autotile, isOneWayTile, isSolidTile, TILE_SIZE, type Terrain } from '../level/tileset';
 import { placeDecorations } from '../view/Decorations';
 import { DEPTH, ParallaxBackground } from '../view/ParallaxBackground';
@@ -71,6 +75,9 @@ export class PlatformerLevelScene extends Phaser.Scene {
   readonly health = new Health(PLAYER_MAX_HP);
   private collectedStars: string[] = [];
   private gateMessageAt = 0;
+  private objects: LevelObjectManager<SceneHost> | null = null;
+  /** Technical levels (dev tools) never record stars, progress or saves. */
+  private sandbox = false;
 
   constructor() {
     super({ key: PlatformerLevelScene.KEY, physics: { arcade: { gravity: { x: 0, y: GRAVITY } } } });
@@ -94,14 +101,17 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
   create(data: LevelSceneData): void {
     const manager = getLevelManager();
+    const sandboxData = getSandboxLevel(data.levelId);
+    this.sandbox = !!sandboxData;
+    const levelData = sandboxData ?? manager.getData(data.levelId);
     const entry = manager.get(data.levelId);
-    const level = parseLevel(manager.getData(data.levelId));
+    const level = parseLevel(levelData);
     const biome = getBiome(level.biome, level.variant);
     // Biome textures are generated on first use so unused biomes cost nothing.
     createMissingPlaceholders(this, biome.assets);
     registerAnimations(this.anims, biome.anims);
     this.levelId = data.levelId;
-    this.levelName = `${getCampaign().positionOf(data.levelId) || (entry?.index ?? 0) + 1}. ${entry?.name ?? ''}`;
+    this.levelName = this.sandbox ? levelData.name : `${getCampaign().positionOf(data.levelId) || (entry?.index ?? 0) + 1}. ${entry?.name ?? ''}`;
     this.bus = new Phaser.Events.EventEmitter();
     this.controls = new ActionInput(this, PLATFORMER_BINDINGS);
     this.stars = 0;
@@ -174,6 +184,9 @@ export class PlatformerLevelScene extends Phaser.Scene {
       if (def) this.combat.spawnEnemy(def, tileCenterX(p), tileBottom(p));
     }
     this.abilities = new AbilitySystem({ scene: this, player: this.player, input: this.controls, combat: this.combat, fx: this.fx }, profile.loadout());
+    // Invalid object configuration throws here with every problem listed, instead of failing silently.
+    this.objects = new LevelObjectManager(createDefaultRegistry(), { scene: this, player: this.player, fx: this.fx, damagePlayer: (hit) => this.damagePlayer(hit) });
+    this.objects.load(levelData.objects, { width: level.width, height: level.height });
     this.physics.add.overlap(this.player, stars, this.onCollectStar, playerAlive, this);
     this.physics.add.overlap(this.player, checkpoints, this.onCheckpoint, playerAlive, this);
 
@@ -195,8 +208,16 @@ export class PlatformerLevelScene extends Phaser.Scene {
     const cancelCharge = (): void => this.abilities.cancelAll();
     this.events.on(Phaser.Scenes.Events.PAUSE, cancelCharge);
     this.game.events.on(Phaser.Core.Events.BLUR, cancelCharge);
+    const pauseObjects = (): void => this.objects?.pause();
+    const resumeObjects = (): void => this.objects?.resume();
+    this.events.on(Phaser.Scenes.Events.PAUSE, pauseObjects);
+    this.events.on(Phaser.Scenes.Events.RESUME, resumeObjects);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       cancelCharge();
+      this.events.off(Phaser.Scenes.Events.PAUSE, pauseObjects);
+      this.events.off(Phaser.Scenes.Events.RESUME, resumeObjects);
+      this.objects?.destroy();
+      this.objects = null;
       this.events.off(Phaser.Scenes.Events.PAUSE, cancelCharge);
       this.game.events.off(Phaser.Core.Events.BLUR, cancelCharge);
       camera.off(Phaser.Cameras.Scene2D.Events.FOLLOW_UPDATE, this.onCameraMoved, this);
@@ -211,6 +232,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
     if (this.finished) this.abilities.cancelAll();
     else this.abilities.update(delta / 1000, this.controls);
     this.combat.update();
+    if (!this.finished) this.objects?.update(delta / 1000);
 
     if (this.player.isAlive && Math.abs(this.player.body.velocity.x) > 20) this.lookAhead = this.player.facing * CAMERA_LOOK_AHEAD;
     const camera = this.cameras.main;
@@ -342,8 +364,10 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.player.freeze();
     this.physics.pause();
     playSound(this, AUDIO.victory);
-    const newStars = getGameData().profile.recordStars(this.levelId, this.collectedStars);
-    const { next, chapterCompleted, unlockedChapters } = getCampaign().complete(this.levelId, { stars: this.stars, total: this.totalStars });
+    const newStars = this.sandbox ? 0 : getGameData().profile.recordStars(this.levelId, this.collectedStars);
+    const { next, chapterCompleted, unlockedChapters } = this.sandbox
+      ? { next: undefined, chapterCompleted: false, unlockedChapters: [] }
+      : getCampaign().complete(this.levelId, { stars: this.stars, total: this.totalStars });
     this.bus.emit(LevelEvent.Victory, this.stars, this.totalStars, next?.id ?? null, newStars, chapterCompleted, unlockedChapters.map((c) => c.name));
   }
 

@@ -4,6 +4,7 @@
  * reachable spot, so unreachable goals and impossible jumps are reported before playing.
  */
 import type { EnemyDef } from '../enemies/EnemyCatalog';
+import { validateObjects } from '../objects/validate';
 import { GRAVITY, PLAYER_BODY, PLAYER_TUNING } from '../physics';
 import { DEFAULT_ENEMY_LEGEND, LEVEL_CHARS, type LevelData, type ParsedLevel, parseLevel, type TilePoint } from './LevelParser';
 import { TILE_SIZE as T } from './tileset';
@@ -116,12 +117,16 @@ export function validateLevel(
     if (knownEnemies?.[p.type]?.movement === 'fly') return;
     if (!supportAt(p.col, p.row + 1)) warn(`El enemigo ${label(p)} no tiene suelo debajo y caerá`);
   });
+  const objectCheck = validateObjects(level.objects, { width: parsed.width, height: parsed.height });
+  for (const issue of objectCheck.issues) (issue.severity === 'error' ? error : warn)(`objects[${issue.index}]: ${issue.message}`);
   if (issues.some((i) => i.severity === 'error') || !parsed.spawn) return { ok: false, issues, level, parsed };
 
+  // The jump simulation knows only terrain: with moving platforms or doors it can't prove or disprove reachability.
+  const reachProblem = objectCheck.objects.length > 0 ? (m: string) => warn(`${m} (aviso: los objetos del nivel no se simulan)`) : error;
   const reach = analyzeReachability(parsed);
-  for (const p of parsed.portals) if (!reach.touched.has(key(p.col, p.row))) error(`La meta ${label(p)} es inalcanzable desde el inicio`);
-  for (const p of parsed.stars) if (!reach.touched.has(key(p.col, p.row))) error(`La estrella ${label(p)} es inalcanzable`);
-  for (const p of parsed.checkpoints) if (!reach.touched.has(key(p.col, p.row))) error(`El checkpoint ${label(p)} es inalcanzable`);
+  for (const p of parsed.portals) if (!reach.touched.has(key(p.col, p.row))) reachProblem(`La meta ${label(p)} es inalcanzable desde el inicio`);
+  for (const p of parsed.stars) if (!reach.touched.has(key(p.col, p.row))) reachProblem(`La estrella ${label(p)} es inalcanzable`);
+  for (const p of parsed.checkpoints) if (!reach.touched.has(key(p.col, p.row))) reachProblem(`El checkpoint ${label(p)} es inalcanzable`);
 
   return { ok: !issues.some((i) => i.severity === 'error'), issues, level, parsed, reach };
 }

@@ -8,6 +8,8 @@ import { BIOMES } from '../biomes';
 import { PlatformerScenes } from '../config';
 import { type ChapterCard, chapterCards, defaultChapterId, gridCenters, moveSelection, type NavKey } from '../level/campaignView';
 import { getCampaign } from '../level/levelLoader';
+import { startLevel } from '../level/levelFlow';
+import { registerSandboxLevel } from '../level/sandboxLevels';
 import { getGameData } from '../progression/gameData';
 
 const CARD_W = 96;
@@ -58,6 +60,13 @@ export class PlatformerChapterSelectScene extends Phaser.Scene {
     keyboard?.on('keydown-SPACE', () => this.open(this.selected));
     keyboard?.on('keydown-ESC', () => exitToMenu(this));
     keyboard?.on('keydown-T', () => this.openShop());
+
+    if (import.meta.env.DEV) {
+      const dev = this.add.rectangle(GAME_WIDTH - 46, GAME_HEIGHT - 8, 84, 12, 0x141327, 0.7).setStrokeStyle(1, 0x52547e).setInteractive({ useHandCursor: true });
+      pixelText(this, GAME_WIDTH - 46, GAME_HEIGHT - 8, 'DEV: TEST OBJETOS (O)', 0x9a9cc0).setOrigin(0.5);
+      dev.on('pointerup', () => this.openObjectsSandbox());
+      keyboard?.on('keydown-O', () => this.openObjectsSandbox());
+    }
 
     const preferred = defaultChapterId(campaign);
     this.select(Math.max(0, this.cards.findIndex((c) => c.id === preferred)));
@@ -117,6 +126,20 @@ export class PlatformerChapterSelectScene extends Phaser.Scene {
 
   private openShop(): void {
     this.scene.start(PlatformerScenes.Shop);
+  }
+
+  /** Development only: technical level for level objects. Outside the campaign; it never saves progress. */
+  private openObjectsSandbox(): void {
+    if (!import.meta.env.DEV) return;
+    void import('../sandbox/objectsLevel')
+      .then(({ buildObjectsSandbox, OBJECTS_SANDBOX_ID }) => {
+        registerSandboxLevel(buildObjectsSandbox(), getGameData().enemies.enemies);
+        startLevel(this, OBJECTS_SANDBOX_ID);
+      })
+      .catch((error: unknown) => {
+        console.error(error);
+        this.hint.setText('Error en el escenario de pruebas: mira la consola');
+      });
   }
 }
 

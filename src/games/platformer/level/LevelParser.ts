@@ -34,6 +34,8 @@ export interface LevelData {
   signs?: Readonly<Record<string, SignText>>;
   /** Map letter -> enemy type id (enemies.json). Overrides the default { "E": "walker" }. */
   enemies?: Readonly<Record<string, string>>;
+  /** Interactive objects (moving platforms, lasers, switches, doors...). Validated by objects/validate.ts. */
+  objects?: unknown;
 }
 
 export const DEFAULT_ENEMY_LEGEND: Readonly<Record<string, string>> = { E: 'walker' };

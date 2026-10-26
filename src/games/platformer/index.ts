@@ -7,6 +7,7 @@ import { unloadHeroSkin } from './assets/heroSkin';
 import { PLATFORMER_ASSETS } from './assets/manifest';
 import { BIOME_THEMES } from './biomes';
 import { releaseLevels } from './level/levelLoader';
+import { removeObjectTextures } from './objects/objectArt';
 import { releaseGameData } from './progression/gameData';
 import { PlatformerAffinityScene } from './scenes/PlatformerAffinityScene';
 import { PlatformerChapterSelectScene } from './scenes/PlatformerChapterSelectScene';
@@ -26,6 +27,7 @@ export const platformerModule: MiniGameModule = {
     unloadAssets(game, PLATFORMER_ASSETS);
     unloadHeroSkin(game);
     releaseLevels(game);
+    removeObjectTextures(game);
     releaseGameData(game);
     for (const biome of BIOME_THEMES) {
       removeAnimations(game.anims, biome.anims);
