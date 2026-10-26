@@ -7,7 +7,7 @@ import { TEX, UI_FRAME } from '../assets/manifest';
 import { hex, PALETTE } from '../assets/palette';
 import { LevelEvent, PLAYER_MAX_HP, PlatformerScenes, type AbilityButton, type PlatformerAction } from '../config';
 import { ABILITY_BUTTONS, keyLabel } from '../controls';
-import { openLevelSelect, startLevel } from '../level/levelFlow';
+import { openChapterSelect, openLevelSelect, startLevel } from '../level/levelFlow';
 import { getGameData } from '../progression/gameData';
 import { PointerHold } from '../touchHold';
 import type { PlatformerLevelScene } from './PlatformerLevelScene';
@@ -228,14 +228,15 @@ export class PlatformerHudScene extends Phaser.Scene {
     this.scene.resume(PlatformerScenes.Level);
   }
 
-  private onVictory(stars: number, total: number, nextLevelId: string | null, newStars: number): void {
+  private onVictory(stars: number, total: number, nextLevelId: string | null, newStars: number, chapterCompleted = false, unlocked: string[] = []): void {
     this.ended = true;
     const buttons: Array<[string, () => void]> = nextLevelId
       ? [['Siguiente nivel', () => startLevel(this, nextLevelId)], ['Repetir', () => this.restartLevel()]]
       : [['Repetir', () => this.restartLevel()]];
-    buttons.push(['Niveles', () => openLevelSelect(this)]);
+    buttons.push([chapterCompleted ? 'Capitulos' : 'Niveles', () => (chapterCompleted ? openChapterSelect(this) : openLevelSelect(this))]);
     const wallet = getGameData().profile.balance;
-    this.showOverlay(nextLevelId ? 'Nivel completado!' : 'Aventura completada!', `Estrellas ${stars}/${total}  +${newStars} nuevas  (saldo ${wallet})`, buttons);
+    const unlockedText = unlocked.length ? `  Desbloqueado: ${unlocked.join(', ')}` : '';
+    this.showOverlay(chapterCompleted ? 'Capitulo completado!' : 'Nivel completado!', `Estrellas ${stars}/${total}  +${newStars} nuevas  (saldo ${wallet})${unlockedText}`, buttons);
   }
 
   private onGameOver(): void {

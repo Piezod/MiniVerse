@@ -7,9 +7,9 @@ import { PLATFORMER_ANIMS } from '../assets/animations';
 import { ENEMY_ANIMS, PROJECTILE_ANIMS } from '../assets/enemySprites';
 import { queueHeroSkin, registerHeroSkin } from '../assets/heroSkin';
 import { PLATFORMER_ASSETS } from '../assets/manifest';
-import { BIOMES } from '../biomes';
+import { BIOME_THEMES } from '../biomes';
 import { PlatformerScenes } from '../config';
-import { buildLevelManager, queueLevels } from '../level/levelLoader';
+import { buildCampaignManager, buildLevelManager, queueLevels } from '../level/levelLoader';
 import { buildGameData, queueGameData } from '../progression/gameData';
 
 export class PlatformerPreloadScene extends Phaser.Scene {
@@ -33,7 +33,7 @@ export class PlatformerPreloadScene extends Phaser.Scene {
     queueLevels(this);
     queueGameData(this);
     // Only biome files with a real `url` are downloaded; the rest is generated when a level starts.
-    for (const biome of Object.values(BIOMES)) queueAssets(this, biome.assets);
+    for (const biome of BIOME_THEMES) queueAssets(this, biome.assets);
   }
 
   create(): void {
@@ -46,6 +46,7 @@ export class PlatformerPreloadScene extends Phaser.Scene {
     registerAnimations(this.anims, PROJECTILE_ANIMS);
     const data = buildGameData(this);
     buildLevelManager(this, data.enemies.enemies);
-    this.scene.start(PlatformerScenes.LevelSelect);
+    buildCampaignManager(this, data.abilities.abilities);
+    this.scene.start(PlatformerScenes.ChapterSelect);
   }
 }

@@ -27,6 +27,8 @@ export interface LevelData {
   name: string;
   /** Visual ambience id (see biomes/index.ts). */
   biome: string;
+  /** Optional visual variant of the biome (biomes/index.ts BIOME_VARIANTS). */
+  variant?: string;
   height: number;
   sections: readonly LevelSection[];
   signs?: Readonly<Record<string, SignText>>;
@@ -43,6 +45,7 @@ export function enemyLegend(level: LevelData): Record<string, string> {
 export interface ParsedLevel {
   id: string;
   biome: string;
+  variant?: string;
   width: number;
   height: number;
   terrain: Terrain[][];
@@ -74,6 +77,7 @@ export function parseLevel(level: LevelData): ParsedLevel {
   const result: ParsedLevel = {
     id: level.id,
     biome: level.biome,
+    variant: level.variant,
     width,
     height: level.height,
     terrain: [],

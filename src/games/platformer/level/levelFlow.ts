@@ -13,11 +13,24 @@ export function startLevel(from: Phaser.Scene, levelId: string): void {
   });
 }
 
-export function openLevelSelect(from: Phaser.Scene): void {
+export interface LevelSelectData {
+  /** Chapter to show; defaults to the last one visited. */
+  chapterId?: string;
+}
+
+export function openLevelSelect(from: Phaser.Scene, chapterId?: string): void {
   withFadeOut(from, () => {
     from.scene.stop(PlatformerScenes.Level);
     from.scene.stop(PlatformerScenes.Hud);
-    from.scene.start(PlatformerScenes.LevelSelect);
+    from.scene.start(PlatformerScenes.LevelSelect, { chapterId } satisfies LevelSelectData);
+  });
+}
+
+export function openChapterSelect(from: Phaser.Scene): void {
+  withFadeOut(from, () => {
+    from.scene.stop(PlatformerScenes.Level);
+    from.scene.stop(PlatformerScenes.Hud);
+    from.scene.start(PlatformerScenes.ChapterSelect);
   });
 }
 

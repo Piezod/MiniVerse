@@ -1,7 +1,7 @@
-import { createBiome } from '../createBiome';
+import { type BiomeDefinition, createBiome } from '../createBiome';
 
 /** Montaña helada: pale blue daylight, snow caps, icicles and falling snow. */
-export const ICE = createBiome({
+export const ICE_DEFINITION: BiomeDefinition = {
   id: 'ice',
   name: 'Montana helada',
   accentColor: '#8fd8ff',
@@ -90,4 +90,6 @@ export const ICE = createBiome({
   ],
   lighting: { vignette: 0.22, overlay: { color: 0x9cc8ff, alpha: 0.08, blend: 'add' } },
   dust: ['#ffffff', '#e4f2ff', '#a8c8ec'],
-});
+};
+
+export const ICE = createBiome(ICE_DEFINITION);

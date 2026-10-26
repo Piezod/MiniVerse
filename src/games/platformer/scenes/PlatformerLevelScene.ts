@@ -26,7 +26,7 @@ import { createMissingPlaceholders } from '../../../core/assets/AssetLoader';
 import { getBiome } from '../biomes';
 import type { BiomeTheme } from '../biomes/BiomeTheme';
 import type { LevelSceneData } from '../level/levelFlow';
-import { getLevelManager } from '../level/levelLoader';
+import { getCampaign, getLevelManager } from '../level/levelLoader';
 import { parseLevel, type TilePoint } from '../level/LevelParser';
 import { autotile, isOneWayTile, isSolidTile, TILE_SIZE, type Terrain } from '../level/tileset';
 import { placeDecorations } from '../view/Decorations';
@@ -96,12 +96,12 @@ export class PlatformerLevelScene extends Phaser.Scene {
     const manager = getLevelManager();
     const entry = manager.get(data.levelId);
     const level = parseLevel(manager.getData(data.levelId));
-    const biome = getBiome(level.biome);
+    const biome = getBiome(level.biome, level.variant);
     // Biome textures are generated on first use so unused biomes cost nothing.
     createMissingPlaceholders(this, biome.assets);
     registerAnimations(this.anims, biome.anims);
     this.levelId = data.levelId;
-    this.levelName = `${(entry?.index ?? 0) + 1}. ${entry?.name ?? ''}`;
+    this.levelName = `${getCampaign().positionOf(data.levelId) || (entry?.index ?? 0) + 1}. ${entry?.name ?? ''}`;
     this.bus = new Phaser.Events.EventEmitter();
     this.controls = new ActionInput(this, PLATFORMER_BINDINGS);
     this.stars = 0;
@@ -343,8 +343,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.physics.pause();
     playSound(this, AUDIO.victory);
     const newStars = getGameData().profile.recordStars(this.levelId, this.collectedStars);
-    const next = getLevelManager().complete(this.levelId, { stars: this.stars, total: this.totalStars });
-    this.bus.emit(LevelEvent.Victory, this.stars, this.totalStars, next?.id ?? null, newStars);
+    const { next, chapterCompleted, unlockedChapters } = getCampaign().complete(this.levelId, { stars: this.stars, total: this.totalStars });
+    this.bus.emit(LevelEvent.Victory, this.stars, this.totalStars, next?.id ?? null, newStars, chapterCompleted, unlockedChapters.map((c) => c.name));
   }
 
   private killPlayer(): void {

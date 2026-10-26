@@ -5,6 +5,7 @@ export type { AbilityButton, PlatformerAction } from './controls';
 
 export const PlatformerScenes = {
   Preload: 'Platformer.Preload',
+  ChapterSelect: 'Platformer.ChapterSelect',
   LevelSelect: 'Platformer.LevelSelect',
   Shop: 'Platformer.Shop',
   Affinity: 'Platformer.Affinity',

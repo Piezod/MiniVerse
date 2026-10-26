@@ -1,0 +1,38 @@
+{
+  "chapters": [
+    {
+      "id": "prologue",
+      "name": "Prologo",
+      "description": "Cuatro mundos para aprender a moverte, saltar y luchar",
+      "order": 0,
+      "biome": null,
+      "levels": ["forest-1", "ruins-1", "ice-1", "volcano-1"],
+      "unlock": null,
+      "rewards": { "abilities": [] }
+    },
+    {
+      "id": "station",
+      "name": "Estacion espacial abandonada",
+      "description": "Hangares y reactores a la deriva. Un guardian protege la sala de control",
+      "order": 1,
+      "planned": true,
+      "plannedLevels": 4,
+      "biome": "station",
+      "levels": [],
+      "unlock": { "chapters": ["prologue"] },
+      "rewards": { "abilities": [] }
+    },
+    {
+      "id": "alien",
+      "name": "Planeta alienigena",
+      "description": "Un mundo vivo de flora luminosa y cuevas. La Reina espera en su guarida",
+      "order": 2,
+      "planned": true,
+      "plannedLevels": 4,
+      "biome": "alien",
+      "levels": [],
+      "unlock": { "chapters": ["station"] },
+      "rewards": { "abilities": [] }
+    }
+  ]
+}
