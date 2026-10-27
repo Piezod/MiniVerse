@@ -142,10 +142,10 @@ describe('enemy configuration (enemies.json)', () => {
   });
 
   it('registers a fixed turret and a slow vulnerable guardian without new combat rules', () => {
-    expect(enemies.enemies['auto-turret']).toMatchObject({ movement: 'stationary', speed: 0, fixedFacing: true, facing: 'left', maxHealth: 2, attack: { kind: 'shoot', telegraph: 0.9, power: 76 } });
+    expect(enemies.enemies['auto-turret']).toMatchObject({ movement: 'stationary', speed: 0, fixedFacing: true, facing: 'left', maxHealth: 2, attack: { kind: 'shoot', telegraph: 0.6, power: 132, burstCount: 3, burstInterval: 0.25, recovery: 1.7 } });
     expect(enemies.enemies['auto-turret-right']).toMatchObject({ facing: 'right', sprite: 'turret' });
     const guardian = enemies.enemies['armored-guardian'];
-    expect(guardian).toMatchObject({ movement: 'patrol', maxHealth: 4, speed: 18, patrolRange: 24, guard: 0.5, attack: { kind: 'lunge', recovery: 1.2 } });
+    expect(guardian).toMatchObject({ movement: 'patrol', maxHealth: 4, speed: 18, patrolRange: 24, guard: 0, attack: { kind: 'lunge', power: 208, recovery: 1.5 } });
     const beam = abilities.abilities.beam;
     for (const id of ['auto-turret', 'armored-guardian']) {
       const enemy = enemies.enemies[id];
@@ -167,6 +167,17 @@ describe('enemy configuration (enemies.json)', () => {
       expect(damage).toBeGreaterThan(0);
       expect(Math.ceil(enemy.maxHealth / damage) * beam.levels[0].energy).toBeLessThanOrEqual(100);
       expect(enemy.immune).toEqual([]);
+    }
+  });
+
+  it('validates bounded configurable bursts without changing single-shot defaults', () => {
+    const definition = { sprite: 'spitter', maxHealth: 2, attack: { kind: 'shoot', burstCount: 3, burstInterval: 0.25 } };
+    const valid = buildEnemyCatalog({ turret: definition }, SPRITES);
+    expect(valid.issues).toEqual([]);
+    expect(valid.enemies.turret.attack).toMatchObject({ burstCount: 3, burstInterval: 0.25 });
+    expect(enemies.enemies.spitter.attack?.burstCount).toBe(1);
+    for (const attack of [{ burstCount: 4 }, { burstCount: 1.5 }, { burstInterval: 0 }, { kind: 'lunge', burstCount: 3 }]) {
+      expect(buildEnemyCatalog({ turret: { ...definition, attack: { ...definition.attack, ...attack } } }, SPRITES).issues.length).toBeGreaterThan(0);
     }
   });
 });

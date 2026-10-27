@@ -171,6 +171,7 @@ export class CombatSystem implements EnemyHost {
   }
 
   update(): void {
+    if (!this.player.isAlive) this.enemyShots.clear(true, true);
     // Arcade's group-vs-group overlap misses PhysicsGroup vs plain Group, so shots are tested one by one.
     for (const shot of [...this.playerShots.getChildren()] as Phaser.Physics.Arcade.Sprite[]) {
       if (shot.active) this.scene.physics.overlap(shot, this.enemies, this.onShotHitsEnemy, undefined, this);

@@ -49,6 +49,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private recoveryTime = 0;
   private stompImmunity = 0;
   private attacked = false;
+  private shotsRemaining = 0;
+  private shotDelay = 0;
   /** Seconds of attack warning left (the enemy holds still and flashes). */
   private windup = 0;
   private windupClock = 0;
@@ -94,9 +96,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.omega) this.bar?.setScrollFactor(0);
     this.play(enemyAnimKey(def.sprite, 'move'));
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
+      this.host.clearBossShots?.(this);
       if (this.omega) {
         this.host.bossHazards?.(this, false);
-        this.host.clearBossShots?.(this);
       }
       this.hurtFlash?.remove(false);
       this.deathTween?.stop();
@@ -141,6 +143,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   applyHit(hit: Hit): HitResult {
     if (!this.isAlive) return { damage: 0, killed: false, immune: false };
     if (this.omega && !this.omega.vulnerable) return { damage: 0, killed: false, immune: true };
+    if (this.def.guard === 0 && hit.form !== 'status' && (hit.fromX === undefined || (hit.fromX - this.x) * this.direction >= 0)) {
+      return { damage: 0, killed: false, immune: true };
+    }
     if (hit.form === 'stomp') {
       if (this.stompImmunity > 0) return { damage: 0, killed: false, immune: false };
       this.stompImmunity = STOMP_IMMUNITY;
@@ -154,6 +159,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.hurtTime = HURT_TIME;
       if ((this.def.attack?.recovery ?? 0) > 0) {
         this.windup = 0;
+        this.shotsRemaining = 0;
         this.attackTime = 0;
         this.recoveryTime = this.def.attack!.recovery!;
         this.attacked = false;
@@ -220,12 +226,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.attackCooldown.update(step);
     this.hurtTime = Math.max(0, this.hurtTime - dt);
     this.attackTime = Math.max(0, this.attackTime - dt);
+    this.shotDelay = Math.max(0, this.shotDelay - step);
     this.recoveryTime = Math.max(0, this.recoveryTime - step);
     this.stompImmunity = Math.max(0, this.stompImmunity - dt);
 
     const target = this.host.target();
     const distance = target.alive ? Phaser.Math.Distance.Between(this.x, this.y - this.displayHeight / 2, target.x, target.y) : Infinity;
     const previous = this.ai;
+    if (previous === 'attack' && this.shotsRemaining > 0) this.attackTime = Math.max(this.attackTime, 0.01);
+    if (!target.alive && previous === 'attack') {
+      this.shotsRemaining = 0;
+      this.attackTime = 0;
+      this.attacked = true;
+    }
     if (previous === 'attack' && this.attackTime <= 0 && this.attacked && (this.def.attack?.recovery ?? 0) > 0) {
       this.recoveryTime = this.def.attack!.recovery!;
       this.attacked = false;
@@ -246,6 +259,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.windupClock = 0;
       this.attackTarget = { x: target.x, y: target.y };
       this.attackTime = telegraph + (this.def.attack?.kind === 'lunge' ? LUNGE_TIME : ATTACK_TIME);
+      this.shotsRemaining = this.def.attack?.kind === 'shoot' ? this.def.attack.burstCount ?? 1 : 0;
+      this.shotDelay = 0;
       this.attacked = false;
     }
 
@@ -385,19 +400,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     } else {
       body.setVelocityX(0);
+      if (this.shotDelay > 1e-9) return;
       const originY = attack.projectile === 'energy' ? this.y - this.displayHeight / 2 : this.y;
       const angle = isFlying(this.def) ? Phaser.Math.Angle.Between(this.x, originY, target.x, target.y) : this.direction > 0 ? 0 : Math.PI;
       this.host.enemyShoot(this, Math.cos(angle) * attack.power, Math.sin(angle) * attack.power, attack.damage);
+      this.shotsRemaining--;
+      if (this.shotsRemaining > 0) {
+        this.shotDelay = attack.burstInterval ?? 0.25;
+        return;
+      }
+      if ((attack.burstCount ?? 1) > 1) this.attackTime = 0;
     }
     this.attacked = true;
     this.attackCooldown.trigger();
   }
 
   private die(): void {
+    this.shotsRemaining = 0;
+    this.host.clearBossShots?.(this);
     this.omega?.defeat();
     if (this.omega) {
       this.host.bossHazards?.(this, false);
-      this.host.clearBossShots?.(this);
     }
     this.ai = 'death';
     this.status.clear();

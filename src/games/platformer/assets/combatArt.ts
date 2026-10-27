@@ -219,8 +219,8 @@ export function drawGuardianFrame(ctx: Ctx, frame: number, w: number, h: number)
     px(ctx, P.metalDark, 8, 2, 11, 9);
     px(ctx, P.metalLight, 9, 2, 9, 2);
     px(ctx, frame === 2 ? P.heart : P.glow, 8, 6, 7, 2);
-    const shieldY = frame === 4 ? 24 : 12;
-    const shieldHeight = frame === 4 ? 7 : 16;
+    const shieldY = 12;
+    const shieldHeight = 16;
     px(ctx, P.goldDark, 1, shieldY, 6, shieldHeight);
     px(ctx, P.gold, 2, shieldY + 1, 3, shieldHeight - 2);
     px(ctx, P.outline, 2, shieldY + 3, 4, 2);

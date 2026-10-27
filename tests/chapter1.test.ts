@@ -401,9 +401,9 @@ describe('Pasillos de seguridad: integración', () => {
 
   it('mantiene encuentros deliberados y zonas de descanso sin enemigos', () => {
     expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DTRG]/g) ?? [])).toEqual([
-      [], ['T'], ['G'], ['D', 'T'], ['D', 'D'], ['D', 'G'], ['R', 'G'],
+      ['D', 'D'], ['D', 'D', 'T', 'G'], ['D', 'G', 'T', 'G'], ['D', 'D', 'G', 'T'], ['D', 'D', 'D', 'D'], ['D', 'D', 'T', 'G'], ['R', 'G'],
     ]);
-    expect(parsed.enemies).toHaveLength(10);
+    expect(parsed.enemies).toHaveLength(24);
     expect(parsed.enemies.every((enemy) => ['drone-scout', 'auto-turret', 'auto-turret-right', 'armored-guardian'].includes(enemy.type))).toBe(true);
     const guardian = parsed.enemies.find((enemy) => enemy.col > 320 && enemy.col < 480 && enemy.type === 'armored-guardian')!;
     expect(catalogs.enemies.enemies[guardian.type].maxHealth).toBe(4);
@@ -561,7 +561,7 @@ describe('El reactor inestable: integración', () => {
       expect(hazards[index].col - end).toBeGreaterThanOrEqual(8);
     }
     expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DNTRGEJ]/g) ?? [])).toEqual([
-      [], ['E', 'J'], ['E', 'J'], ['E', 'D', 'N', 'J'], [], ['E', 'T', 'G', 'J'], [], ['E', 'E', 'J', 'G'],
+      ['D', 'J'], ['D', 'E', 'J', 'T'], ['E', 'E', 'J', 'G'], ['E', 'D', 'T', 'N', 'J'], ['T', 'J'], ['D', 'E', 'T', 'G', 'J'], ['E', 'J'], ['E', 'E', 'J', 'G'],
     ]);
   });
 
@@ -584,7 +584,7 @@ describe('El reactor inestable: integración', () => {
   });
 
   it('introduce ambos enemigos por separado y exige plataformas para el encuentro final', () => {
-    const introductions = parsed.enemies.filter((enemy) => enemy.col >= 200 && enemy.col < 400);
+    const introductions = parsed.enemies.filter((enemy) => enemy.col >= 200 && enemy.col < 300);
     expect(introductions.map((enemy) => enemy.type)).toEqual(['electric-drone', 'nexar-technician']);
     expect((introductions[1].col - introductions[0].col) * 16).toBeGreaterThan(2 * 112 + 40);
     const escape = parsed.enemies.filter((enemy) => enemy.col >= 1400);
@@ -781,6 +781,42 @@ describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
   });
 });
 
+describe('Capitulo 1: densidad y espacio de combate', () => {
+  it.each([
+    ['c1-1-hangar', 9, 12, [2, 3, 1, 1, 3, 2]],
+    ['c1-2-corridors', 20, 26, [2, 4, 4, 4, 4, 4, 2]],
+    ['c1-3-reactor', 25, 32, [2, 4, 4, 5, 2, 5, 2, 4]],
+    ['c1-4-omega', 8, 8, [1, 3, 0, 3, 1, 0]],
+  ] as const)('%s mantiene densidad acotada, refugios y espacio para flanquear', (id, minimum, maximum, sections) => {
+    const entry = realEntries().find((level) => level.id === id)!;
+    const level = entry.validation.parsed!;
+    const raw = entry.data!;
+    expect(level.enemies.length).toBeGreaterThanOrEqual(minimum);
+    expect(level.enemies.length).toBeLessThanOrEqual(maximum);
+    expect(raw.sections.map((section) => section.rows.join('').split('').filter((symbol) => raw.enemies?.[symbol]).length)).toEqual(sections);
+    for (const enemy of level.enemies) {
+      expect(level.enemies.filter((other) => Math.abs(other.col - enemy.col) <= 10).length).toBeLessThanOrEqual(4);
+      const def = catalogs.enemies.enemies[enemy.type];
+      const reach = Math.max(def.detectRange, def.attack?.range ?? 0) + (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + (def.attack?.kind === 'lunge' ? def.attack.power * 0.35 : 0);
+      for (const refuge of def.boss ? [] : [level.spawn!, ...level.checkpoints]) {
+        expect(Math.hypot((refuge.col - enemy.col) * 16, (refuge.row - enemy.row) * 16)).toBeGreaterThan(reach);
+      }
+      if (enemy.type !== 'armored-guardian') continue;
+      for (let offset = -6; offset <= 6; offset++) {
+        expect(['ground', 'stone']).toContain(level.terrain[enemy.row + 1][enemy.col + offset]);
+        for (let height = 0; height <= 3; height++) {
+          expect(['ground', 'stone']).not.toContain(level.terrain[enemy.row - height][enemy.col + offset]);
+        }
+      }
+      const doors = validateObjects(raw.objects, { width: level.width, height: level.height, externalSignals: id === 'c1-4-omega' ? ['omega-engaged', 'omega-hazards', 'omega-defeated'] : [] }).objects.filter((object) => object.type === 'door');
+      expect(doors.every((door) => Math.abs(door.col - enemy.col) > 6)).toBe(true);
+    }
+    if (id === 'c1-4-omega') {
+      expect(level.enemies.filter((enemy) => enemy.col >= 640 && enemy.col < 660).map((enemy) => enemy.type)).toEqual(['omega-7']);
+    }
+  });
+});
+
 describe('Hangar: nivel, drones y narrativa', () => {
   const raw = readJson('levels/chapter1/01-hangar.json');
   const validation = validateLevel(raw, BIOME_IDS, catalogs.enemies.enemies, BIOME_VARIANTS);
@@ -797,7 +833,7 @@ describe('Hangar: nivel, drones y narrativa', () => {
     expect(validation.parsed!.stars).toHaveLength(27);
     expect(validation.parsed!.checkpoints).toHaveLength(2);
     expect(validation.parsed!.portals).toHaveLength(1);
-    expect(validation.parsed!.enemies).toHaveLength(9);
+    expect(validation.parsed!.enemies).toHaveLength(12);
     expect(new Set(validation.parsed!.enemies.map((enemy) => enemy.type))).toEqual(new Set(['drone-scout', 'drone-sentinel']));
   });
 
@@ -816,7 +852,7 @@ describe('Hangar: nivel, drones y narrativa', () => {
 
   it('alterna seis encuentros y deja descanso antes de la terminal', () => {
     expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DN]/g) ?? [])).toEqual([
-      ['D'], ['D', 'D'], ['D'], ['N'], ['D', 'N'], ['D', 'N'],
+      ['D', 'D'], ['D', 'D', 'D'], ['D'], ['N'], ['D', 'N', 'D'], ['D', 'N'],
     ]);
     const terminal = story.beats.find((beat) => beat.id === 'terminal')!.trigger;
     expect(terminal.type).toBe('zone');

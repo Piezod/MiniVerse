@@ -36,7 +36,11 @@ vi.mock('phaser', async () => {
     play(key: string) { this.animation = key; return this; }
     destroy() { if (this.active) { this.active = false; this.emit('destroy'); } }
   }
+  class Rectangle {
+    constructor(public x: number, public y: number, public width: number, public height: number) {}
+  }
   return { default: {
+    Geom: { Rectangle, Intersects: { RectangleToRectangle: (first: Rectangle, second: Rectangle) => first.x < second.x + second.width && first.x + first.width > second.x && first.y < second.y + second.height && first.y + first.height > second.y } },
     Physics: { Arcade: { Sprite } }, GameObjects: { Events: { DESTROY: 'destroy' } },
     Math: { Distance: { Between: (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by) }, Angle: { Between: (ax: number, ay: number, bx: number, by: number) => Math.atan2(by - ay, bx - ax) } },
   } };
@@ -224,29 +228,39 @@ describe('Enemy: torreta y guardian en el motor existente', () => {
     const right = setup('auto-turret-right', 160);
     right.enemy.update(0, 16);
     right.enemy.update(0, 900);
-    expect(right.host.enemyShoot).toHaveBeenCalledWith(right.enemy, 76, 0, 1);
+    expect(right.host.enemyShoot).toHaveBeenCalledWith(right.enemy, 132, 0, 1);
     expect(right.enemy.flipX).toBe(true);
   });
 
-  it('el aviso precede al proyectil y no se repite el disparo dentro del ataque', () => {
+  it('avisa y dispara tres proyectiles separados por 0.25 segundos antes de descansar', () => {
     const { enemy, host } = setup();
-    enemy.update(0, 16);
+    enemy.update(0, 0);
     expect(enemy.aiState).toBe('attack');
     expect(host.enemyShoot).not.toHaveBeenCalled();
     expect(enemy.body.velocity.x).toBe(0);
-    enemy.update(0, 400);
+    enemy.update(0, 590);
     expect(host.enemyShoot).not.toHaveBeenCalled();
-    enemy.update(0, 500);
+    enemy.update(0, 11);
     expect(host.enemyShoot).toHaveBeenCalledTimes(1);
-    const [, vx, vy] = vi.mocked(host.enemyShoot).mock.calls[0];
-    expect(vx).toBe(-76);
-    expect(Math.abs(vy)).toBeLessThan(0.001);
-    enemy.update(0, 100);
+    enemy.update(0, 240);
     expect(host.enemyShoot).toHaveBeenCalledTimes(1);
-    enemy.update(0, 400);
+    enemy.update(0, 10);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(2);
+    enemy.update(0, 250);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(3);
+    enemy.update(0, 10);
     expect(enemy.aiState).toBe('recover');
-    enemy.update(0, 700);
-    expect(host.enemyShoot).toHaveBeenCalledTimes(1);
+    enemy.update(0, 1690);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(3);
+    enemy.update(0, 11);
+    expect(enemy.aiState).toBe('attack');
+    expect(host.enemyShoot).toHaveBeenCalledTimes(3);
+    enemy.update(0, 600);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(4);
+    for (const [, vx, vy] of vi.mocked(host.enemyShoot).mock.calls) {
+      expect(vx).toBe(-132);
+      expect(vy).toBeCloseTo(0);
+    }
   });
 
   it('no inicia un ataque sin objetivo vivo ni fuera del alcance', () => {
@@ -268,7 +282,7 @@ describe('Enemy: torreta y guardian en el motor existente', () => {
     expect(enemy.aiState).toBe('attack');
     expect(enemy.body.velocity.x).toBe(0);
     enemy.update(0, 850);
-    expect(enemy.body.velocity.x).toBe(-88);
+    expect(enemy.body.velocity.x).toBe(-208);
     expect(enemy.body.velocity.y).toBe(12);
     enemy.update(0, 400);
     expect(enemy.aiState).toBe('recover');
@@ -276,7 +290,7 @@ describe('Enemy: torreta y guardian en el motor existente', () => {
     expect(ENEMY_ANIMS.find((animation) => animation.key === 'platformer.enemy.guardian.recover')?.frames).toEqual([4]);
     enemy.update(0, 700);
     expect(enemy.aiState).toBe('recover');
-    enemy.update(0, 600);
+    enemy.update(0, 900);
     expect(enemy.aiState).toBe('patrol');
   });
 
@@ -286,17 +300,121 @@ describe('Enemy: torreta y guardian en el motor existente', () => {
     target.x = 135;
     target.y = 30;
     enemy.update(0, 850);
-    expect(enemy.body.velocity.x).toBe(-88);
+    expect(enemy.body.velocity.x).toBe(-208);
     expect(enemy.body.velocity.y).toBe(0);
   });
 
-  it('el escudo reduce el golpe frontal y queda abierto al contraataque', () => {
-    const { enemy } = setup('armored-guardian');
+  it('el escudo bloquea el frente y solo admite golpes por la espalda incluso en recuperacion', () => {
+    const { enemy } = setup('armored-guardian', 65);
     const hit = { amount: 1, form: 'projectile' as const, element: 'energy', fromX: 40 };
-    expect(enemy.applyHit(hit).damage).toBe(0.5);
-    expect(enemy.applyHit(hit).damage).toBe(1);
-    const behind = setup('armored-guardian').enemy;
-    expect(behind.applyHit({ ...hit, fromX: 160 }).damage).toBe(1);
+    expect(enemy.applyHit(hit)).toEqual({ damage: 0, killed: false, immune: true });
+    enemy.update(0, 16);
+    enemy.update(0, 850);
+    enemy.update(0, 400);
+    expect(enemy.aiState).toBe('recover');
+    expect(enemy.applyHit(hit).damage).toBe(0);
+    expect(enemy.applyHit({ ...hit, fromX: 160 }).damage).toBe(1);
+  });
+
+  it.each(['energy', 'fire', 'ice', 'laser'])('el escudo bloquea %s frontal sin estados ni retroceso', (element) => {
+    const { enemy } = setup('armored-guardian', 65);
+    for (const form of ['projectile', 'area', 'stomp'] as const) {
+      expect(enemy.applyHit({ amount: 10, form, element, fromX: 40, ignoreArmor: true, effects: [{ id: 'burn', chance: 1 }] })).toEqual({ damage: 0, killed: false, immune: true });
+    }
+    expect(enemy.health.current).toBe(4);
+    expect(enemy.status.ids).toEqual([]);
+    expect(enemy.body.velocity.x).toBe(0);
+    expect(enemy.applyHit({ amount: 1, form: 'projectile', element, fromX: 160 }).damage).toBeGreaterThan(0);
+  });
+
+  it('orienta el escudo a la derecha y no gira durante la recuperacion', () => {
+    const { enemy, target } = setup('armored-guardian', 135);
+    enemy.update(0, 0);
+    enemy.update(0, 850);
+    expect(enemy.body.velocity.x).toBe(208);
+    target.x = 40;
+    enemy.update(0, 400);
+    expect(enemy.aiState).toBe('recover');
+    expect(enemy.applyHit({ amount: 1, form: 'projectile', fromX: 160 }).damage).toBe(0);
+    enemy.update(0, 500);
+    expect(enemy.applyHit({ amount: 1, form: 'area', fromX: 160 }).damage).toBe(0);
+    expect(enemy.applyHit({ amount: 1, form: 'area', fromX: 40 }).damage).toBe(1);
+  });
+
+  it('el laser penetrante no ignora el escudo direccional', () => {
+    const { enemy } = setup('armored-guardian');
+    const combat = Object.assign(Object.create(CombatSystem.prototype) as object, {
+      terrain: { getTileAtWorldXY: () => null }, enemies: { getChildren: () => [enemy] },
+      fx: { impact: vi.fn() }, scene: { sound: { mute: true } },
+    }) as unknown as CombatSystem;
+    Object.assign(enemy.body, { x: 90, y: 76, width: 20, height: 24 });
+    combat.fireBeam({ x: 40, y: 90, dir: 1, range: 200, height: 12, pierce: 8, hit: { amount: 3, form: 'projectile', element: 'laser', ignoreArmor: true } });
+    expect(enemy.health.current).toBe(4);
+    combat.fireBeam({ x: 160, y: 90, dir: -1, range: 200, height: 12, pierce: 8, hit: { amount: 1, form: 'projectile', element: 'laser' } });
+    expect(enemy.health.current).toBeLessThan(4);
+  });
+
+  it('cancela rafagas al perder al jugador o morir sin acumular disparos tras pausas largas', () => {
+    const { enemy, host, target } = setup();
+    enemy.update(0, 0);
+    enemy.update(0, 600);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(1);
+    enemy.update(0, 9000);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(2);
+    target.alive = false;
+    enemy.update(0, 1000);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(2);
+    enemy.applyHit({ amount: 99, form: 'projectile' });
+    enemy.update(0, 10000);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(2);
+    expect(host.clearBossShots).toHaveBeenCalledWith(enemy);
+  });
+
+  it('retira solo los disparos del enemigo muerto y vacia los restantes al morir el jugador', () => {
+    const { enemy } = setup();
+    const owned = { active: true, getData: () => enemy, destroy: vi.fn() };
+    const other = { active: true, getData: () => null, destroy: vi.fn() };
+    const shots = { scene: {}, getChildren: () => [owned, other], clear: vi.fn() };
+    const combat = Object.assign(Object.create(CombatSystem.prototype) as object, {
+      enemyShots: shots, playerShots: { getChildren: () => [] }, player: { isAlive: false },
+    }) as unknown as CombatSystem;
+    combat.clearBossShots(enemy);
+    expect(owned.destroy).toHaveBeenCalledOnce();
+    expect(other.destroy).not.toHaveBeenCalled();
+    combat.update();
+    expect(shots.clear).toHaveBeenCalledWith(true, true);
+  });
+
+  it('morir en mitad de una rafaga limpia sus proyectiles y no deja ataques al recrearse', () => {
+    const first = setup();
+    first.enemy.update(0, 0);
+    first.enemy.update(0, 600);
+    expect(first.host.enemyShoot).toHaveBeenCalledOnce();
+    first.enemy.applyHit({ amount: 99, form: 'projectile' });
+    first.enemy.update(0, 1000);
+    expect(first.host.enemyShoot).toHaveBeenCalledOnce();
+    expect(first.host.clearBossShots).toHaveBeenCalledWith(first.enemy);
+    first.enemy.destroy();
+    const second = setup();
+    second.enemy.update(0, 0);
+    second.enemy.update(0, 590);
+    expect(second.host.enemyShoot).not.toHaveBeenCalled();
+  });
+
+  it('un proyectil no causa impactos duplicados y la invulnerabilidad consume el siguiente', () => {
+    const player = { isInvulnerable: false };
+    const damagePlayer = vi.fn(() => { player.isInvulnerable = true; });
+    const combat = Object.assign(Object.create(CombatSystem.prototype) as object, {
+      player, callbacks: { damagePlayer }, popShot: (shot: { destroy(): void }) => shot.destroy(),
+    }) as unknown as { onShotHitsPlayer(player: unknown, shot: unknown): void };
+    const shot = { active: true, x: 100, getData: (key: string) => key === 'damage' ? 1 : 'energy', destroy: () => { shot.active = false; } };
+    combat.onShotHitsPlayer(player, shot);
+    combat.onShotHitsPlayer(player, shot);
+    expect(damagePlayer).toHaveBeenCalledOnce();
+    const next = { ...shot, active: true, destroy: () => { next.active = false; } };
+    combat.onShotHitsPlayer(player, next);
+    expect(damagePlayer).toHaveBeenCalledOnce();
+    expect(next.active).toBe(false);
   });
 
   it('dañar durante el aviso lo interrumpe sin dejar un disparo pendiente', () => {

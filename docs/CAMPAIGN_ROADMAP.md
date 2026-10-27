@@ -137,13 +137,13 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
   carpetas `public/assets/platformer/biomes/station/*` listas para PNG vía `files`).
 
 **Hangar recuperado (`feature/level-objects`)**
-- `levels/chapter1/01-hangar.json`: seis secciones, 380 x 24 tiles, 27 estrellas, dos checkpoints y nueve drones.
+- `levels/chapter1/01-hangar.json`: seis secciones, 380 x 24 tiles, 27 estrellas, dos checkpoints y doce drones.
 - Tres plataformas móviles, tres láseres cíclicos, un suelo eléctrico, un interruptor y dos puertas enlazadas.
 - Dron explorador: 1 de vida, velocidad 56, patrulla de 28 px y embestida de 132 px/s tras 0.65 s de aviso.
 - Centinela: 3 de vida (sin aumento), velocidad 22, distancia preferida de 96 px y disparo de 82 px/s;
   avisa 0.8 s y recarga durante 3.2 s. Los drones fijan el objetivo al comenzar el aviso, sin perseguirlo durante el ataque.
-- Encuentros por sección: explorador aislado; dos exploradores separados; un explorador sobre apoyo firme entre
-  plataformas; centinela junto al suelo eléctrico; explorador y centinela entre contenedores; mixto final breve.
+- Enemigos por sección: 2, 3, 1, 1, 3 y 2. Exploradores separados en altura, centinela junto al suelo eléctrico,
+  encuentro mixto entre contenedores y final breve; se conservan refugios y espacio de salto.
 - Descanso antes de la terminal, fuera del alcance combinado de patrulla, persecución y disparo de los enemigos finales.
 - Ambientación: evacuación incompleta, cápsulas vacías, seguridad alterada por invasores y transmisión fragmentada
   antes del final. Los mensajes ambientales son de una frase y no bloquean el juego.
@@ -168,22 +168,25 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
 - Archivo `levels/chapter1/02-corridors.json`; bioma `station`, variante `corridors`, 1120 x 28 tiles.
 - Siete secciones: entrada y registro, defensa alterada, dos circuitos de puertas, defensa mixta,
   ascenso de mantenimiento, bloqueo combinado y sala de registros.
-- 51 estrellas opcionales, diez enemigos y un checkpoint antes del ascenso. Entrada, checkpoint y zona del
+- 51 estrellas opcionales, 24 enemigos y un checkpoint antes del ascenso. Entrada, checkpoint y zona del
   registro final fuera de los radios de persecución y ataque.
-- Progresión de combate: torreta aislada; guardián aislado; torreta con explorador; guardian con láseres;
-  puesto mixto final con torreta orientada a la derecha y guardián. El ascenso conserva sus dos exploradores.
-- `auto-turret`: fija, 2 de vida, aviso de 0.9 s, disparo horizontal a 76 px/s, cadencia de 2.8 s y recuperación
-  de 0.65 s. Solo detecta al frente. `auto-turret-right` hereda sus datos y cambia `facing` a `right`.
+- Enemigos por sección: 2, 4, 4, 4, 4, 4 y 2. Se combinan exploradores, torretas y guardianes en grupos
+  separados; el ascenso tiene cuatro exploradores en distintas alturas y el registro final conserva su refugio.
+- `auto-turret`: fija, 2 de vida, aviso de 0.6 s y ráfaga de tres disparos horizontales a 132 px/s,
+  separados por 0.25 s; pausa de 1.7 s entre ráfagas. Solo detecta al frente. `auto-turret-right` invierte la orientación.
 - `armored-guardian`: robot terrestre de 4 de vida, velocidad 18 px/s y patrulla limitada a 24 px del origen.
-  Embiste a 88 px/s tras un aviso de 0.85 s, sin seguir al jugador durante la embestida. Después permanece
-  inmóvil 1.2 s, sin protección frontal. El escudo normal reduce a la mitad los golpes frontales, no los anula.
+  Embiste a 208 px/s tras un aviso de 0.85 s en una dirección fija. Después permanece inmóvil 1.5 s sin girarse.
+  El escudo bloquea todo golpe frontal, incluidos láser penetrante y elementos, también durante la recuperación;
+  hay que saltar la carga y atacar por detrás. Cada guardián conserva al menos seis tiles libres por lado.
 - Configuración reutilizable en `enemies.json`: `facing`, `fixedFacing`, `patrolRange`, `attack.telegraph`,
-  `attack.cooldown` y `attack.recovery`; vida, daño de contacto, velocidad, elemento y resistencias usan los campos
+  `attack.cooldown`, `attack.recovery`, `attack.burstCount` y `attack.burstInterval`; vida, daño de contacto, velocidad, elemento y resistencias usan los campos
   existentes. No hay un segundo sistema de IA. Los nuevos sprites son placeholders sustituibles por spritesheets.
 - El rayo de nivel 1 puede derrotar a ambos enemigos; saltar, flanquear o aprovechar la recuperación evita
   depender de compras. Dañar al enemigo durante el aviso interrumpe el ataque y reinicia una pausa segura.
 - `tests/enemies.test.ts` ejecuta la entidad Enemy real con un entorno Phaser mínimo: aviso previo al disparo,
   orientación, cadencia, embestida terrestre, escudo, interrupción, muerte única y limpieza de barra, flash y tween.
+- Las ráfagas no usan temporizadores independientes ni recuperan disparos atrasados de golpe. Morir o destruir
+  un enemigo retira sus proyectiles; la muerte del jugador vacía los disparos enemigos y el reinicio recrea los grupos.
 - Tres plataformas móviles, cuatro láseres con aviso, cinco interruptores permanentes y cinco puertas.
   Los circuitos finales abren sus puertas y desactivan láseres; no hay ventanas temporizadas que invaliden un respawn.
 - Tres registros cuentan la reprogramación NÉXAR, la captura y el transporte humano fuera de la estación.
@@ -201,9 +204,10 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
 - Archivo `levels/chapter1/03-reactor.json`; bioma `station`, variante `reactor`, 1600 x 28 tiles.
 - Ocho secciones: acceso, suelos electrificados, transporte sobre conductores, drones, regulación,
   defensas combinadas, sobrecarga y escape al núcleo de seguridad.
-- 64 estrellas opcionales y dieciséis enemigos, distribuidos expresamente. Dron eléctrico y técnico NÉXAR
+- 64 estrellas opcionales y 28 enemigos, distribuidos expresamente. Dron eléctrico y técnico NÉXAR
   se presentan por separado en dos claros, antes de combinarlos con conductores, plataformas y defensas existentes.
-  Acceso, regulación, sobrecarga y terminal conservan zonas sin enemigos para leer y recuperar el ritmo.
+  Enemigos por sección: 2, 4, 4, 5, 2, 5, 2 y 4. Acceso, regulación, sobrecarga y terminal conservan
+  zonas de descanso entre grupos para leer y recuperar el ritmo; los cuatro checkpoints siguen fuera de detección.
 - Trece suelos eléctricos, cinco láseres, seis plataformas móviles, cuatro controles permanentes y cinco puertas.
   Todos los peligros anuncian la descarga, mantienen ventanas de apagado y tienen tramos de espera entre ellos.
 - Cuatro checkpoints: al final del acceso, antes de la regulación, antes de la sobrecarga y antes del escape, fuera del alcance
@@ -234,8 +238,9 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
 ### 0.6e Episodio 4: Protocolo OMEGA
 
 - Archivo `levels/chapter1/04-omega.json`; bioma `station`, variante `boss`, 740 x 28 tiles, 20 estrellas.
-- Aproximación con defensas existentes, dos controles de acceso, checkpoint antes de arena y salida segura.
+- Ocho enemigos en total: siete defensas en la aproximación y OMEGA-7, con dos controles, checkpoint y salida segura.
   La arena mide 20 tiles de ancho; la cámara se fija para mostrarla entera durante el combate.
+- La arena conserva al jefe como único enemigo: no se añaden apoyos dentro de los láseres y conductores laterales.
 - `omega-7` está registrado con `boss: true`, sprite provisional propio de 48 x 48, barra fija y 20 de vida.
   Usa Enemy, Health, afinidades y proyectiles compartidos. Solo recibe daño con el núcleo abierto en recuperación.
 - Máquina recuperada `OmegaController`: fase 1 por encima del 70%, fase 2 entre 70% y 35%, fase 3 desde el 35%.

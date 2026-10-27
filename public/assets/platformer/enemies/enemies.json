@@ -113,7 +113,7 @@
     "fixedFacing": true,
     "detectRange": 176,
     "stomp": "damage",
-    "attack": { "kind": "shoot", "cooldown": 2.8, "range": 176, "damage": 1, "power": 76, "telegraph": 0.9, "recovery": 0.65 },
+    "attack": { "kind": "shoot", "cooldown": 1.7, "range": 176, "damage": 1, "power": 132, "telegraph": 0.6, "recovery": 1.7, "burstCount": 3, "burstInterval": 0.25 },
     "reward": { "energy": 15 }
   },
   "auto-turret-right": {
@@ -133,9 +133,9 @@
     "detectRange": 110,
     "stomp": "damage",
     "stompDamage": 1,
-    "guard": 0.5,
+    "guard": 0,
     "resist": { "fire": 0.8 },
-    "attack": { "kind": "lunge", "cooldown": 3, "range": 56, "damage": 1, "power": 88, "telegraph": 0.85, "recovery": 1.2 },
+    "attack": { "kind": "lunge", "cooldown": 3, "range": 104, "damage": 1, "power": 208, "telegraph": 0.85, "recovery": 1.5 },
     "reward": { "energy": 30 }
   },
   "omega-7": {

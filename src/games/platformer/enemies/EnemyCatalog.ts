@@ -30,6 +30,8 @@ export interface EnemyAttack {
   /** Seconds the enemy stops and flashes before the attack lands (0 = no warning). */
   telegraph: number;
   recovery?: number;
+  burstCount?: number;
+  burstInterval?: number;
   projectile?: 'fireball' | 'energy';
   /** Element of the attack; defaults to the enemy's element. */
   element: string | null;
@@ -203,9 +205,13 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
           power: n('power', 10, 600, 100),
           telegraph: n('telegraph', 0, 2, 0),
           recovery: n('recovery', 0, 3, 0),
+          burstCount: n('burstCount', 1, 3, 1),
+          burstInterval: n('burstInterval', 0.1, 1, 0.25),
           element: typeof a.element === 'string' ? a.element : element,
           projectile: a.projectile === 'energy' ? 'energy' : 'fireball',
         };
+        if (!Number.isInteger(attack.burstCount)) errors.push('"attack.burstCount" debe ser entero');
+        if (attack.burstCount! > 1 && kind !== 'shoot') errors.push('"attack.burstCount" solo se usa con shoot');
         if (a.projectile !== undefined && !['fireball', 'energy'].includes(a.projectile as string)) errors.push('"attack.projectile" debe ser fireball o energy');
         if (typeof a.element === 'string' && !isElement(a.element)) errors.push(`"attack.element" desconocido: ${a.element}`);
       }
