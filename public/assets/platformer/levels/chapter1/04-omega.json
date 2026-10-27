@@ -1,0 +1,155 @@
+{
+  "id": "c1-4-omega",
+  "name": "Protocolo OMEGA",
+  "biome": "station",
+  "variant": "boss",
+  "height": 28,
+  "sections": [
+    {
+      "name": "Camino al nucleo",
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+        "............................S...........................................................................................S",
+        "........................==========..................................................................................==========",
+        "....................====........................................................................................====",
+        "..............................................................................XXXXXX",
+        "......P.....S.....1..................................S....................====XXXXXX....................................................S",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Ultima linea defensiva",
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+        "..............................................................................................................E",
+        ".................................................................................................S",
+        ".............................................................................................==========",
+        "..........................XXXXXX.........................................................====",
+        ".........2.....S......====XXXXXX...................T................S...............................................................................S",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Acceso de seguridad",
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "", "", "", "", "", "", "", "", "", "", "", "", "",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "", "", "",
+        "........................S",
+        "....................================",
+        "................====",
+        "",
+        "........3................................................S............................4..............................S..............................S",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Antesala de OMEGA",
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+        "..............................................................................................................E",
+        "..............................................S...........................................................S",
+        "..........................................==========..................................................==========",
+        "......................................====........................................................====",
+        "........5.....................G......................S.................D.............................................................................K......S",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################",
+        "################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Arena OMEGA-7",
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXX",
+        "", "", "", "", "", "", "", "", "", "", "", "", "",
+        "XXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXX",
+        "", "", "", "", "",
+        "....===......===",
+        "",
+        "..........B",
+        "####################", "####################", "####################"
+      ]
+    },
+    {
+      "name": "Coordenadas recuperadas",
+      "rows": [
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+        "............................S",
+        "........................==========",
+        "....................====",
+        "",
+        "........6......S........................................S.............O",
+        "################################################################################",
+        "################################################################################",
+        "################################################################################"
+      ]
+    }
+  ],
+  "signs": {
+    "1": { "keyboard": "NUCLEO DE SEGURIDAD", "touch": "NUCLEO DE SEGURIDAD" },
+    "2": { "keyboard": "DEFENSAS EXTERIORES", "touch": "DEFENSAS EXTERIORES" },
+    "3": { "keyboard": "CONTROL ELEVADO", "touch": "CONTROL ELEVADO" },
+    "4": { "keyboard": "SEGUNDO CONTROL", "touch": "SEGUNDO CONTROL" },
+    "5": { "keyboard": "PROTOCOLO OMEGA", "touch": "PROTOCOLO OMEGA" },
+    "6": { "keyboard": "COORDENADAS GUARDADAS", "touch": "COORDENADAS GUARDADAS" }
+  },
+  "enemies": { "T": "auto-turret", "E": "electric-drone", "G": "armored-guardian", "D": "drone-scout", "B": "omega-7" },
+  "objects": [
+    { "type": "electricFloor", "id": "outer-conductor", "col": 232, "row": 24, "width": 7, "on": 1.8, "off": 1.8, "warning": 1 },
+    { "type": "movingPlatform", "id": "outer-ferry", "col": 228, "row": 22, "width": 4, "axis": "x", "travel": 14, "speed": 32, "wait": 1 },
+    { "type": "switch", "id": "security-a", "col": 350, "row": 20 },
+    { "type": "door", "id": "security-door-a", "col": 370, "row": 17, "height": 8, "opensWith": "security-a" },
+    { "type": "switch", "id": "security-b", "col": 406, "row": 24 },
+    { "type": "laser", "id": "security-laser", "col": 418, "row": 17, "orientation": "vertical", "length": 7, "on": 1.6, "off": 1.7, "warning": 1, "disabledBy": "security-b" },
+    { "type": "door", "id": "security-door-b", "col": 430, "row": 17, "height": 8, "opensWith": ["security-a", "security-b"] },
+    { "type": "door", "id": "arena-entry", "col": 639, "row": 17, "height": 8, "opensWith": "omega-engaged", "inverted": true },
+    { "type": "door", "id": "arena-exit", "col": 660, "row": 17, "height": 8, "opensWith": "omega-defeated" },
+    { "type": "laser", "id": "omega-laser-left", "col": 642, "row": 17, "orientation": "vertical", "length": 7, "mode": "permanent", "warning": 0.9, "enabledBy": "omega-hazards" },
+    { "type": "laser", "id": "omega-laser-right", "col": 657, "row": 17, "orientation": "vertical", "length": 7, "mode": "permanent", "warning": 0.9, "enabledBy": "omega-hazards" },
+    { "type": "electricFloor", "id": "omega-floor-left", "col": 641, "row": 24, "width": 3, "mode": "permanent", "warning": 0.9, "enabledBy": "omega-hazards" },
+    { "type": "electricFloor", "id": "omega-floor-right", "col": 657, "row": 24, "width": 3, "mode": "permanent", "warning": 0.9, "enabledBy": "omega-hazards" }
+  ],
+  "bossEncounter": {
+    "enemy": "omega-7",
+    "arena": { "col": 640, "row": 17, "width": 20, "height": 8 },
+    "signals": { "engaged": "omega-engaged", "hazards": "omega-hazards", "defeated": "omega-defeated" },
+    "intro": "omega-introduction",
+    "victory": "omega-defeated"
+  },
+  "story": {
+    "beats": [
+      { "id": "core-arrival", "trigger": { "type": "start" }, "lines": [{ "speaker": "luma", "text": "El reactor ya no alimenta el transporte. Solo queda el núcleo de seguridad: OMEGA-7 protege sus registros.", "duration": 3 }] },
+      { "id": "outer-defense", "trigger": { "type": "zone", "col": 168, "row": 19, "width": 4, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Última línea defensiva. Aprovecha los avisos y reserva energía para la unidad del núcleo.", "duration": 3 }] },
+      { "id": "access-controls", "trigger": { "type": "zone", "col": 326, "row": 19, "width": 4, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Dos controles abren el acceso. El primero está elevado; el segundo anula el láser del pasillo.", "duration": 3 }] },
+      { "id": "boss-checkpoint", "trigger": { "type": "zone", "col": 622, "row": 19, "width": 4, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Punto de control. OMEGA abre el núcleo después de atacar. Salta sobre la embestida y usa las plataformas.", "duration": 3 }] },
+      { "id": "omega-introduction", "trigger": { "type": "event" }, "blocking": true, "lines": [
+        { "speaker": "omega-7", "text": "Armadura PIEZOD reconocida. Tu despertar no fue accidental. La secuencia de activación llevaba tu firma." },
+        { "speaker": "piezod", "text": "Entonces sabes quién se llevó a la tripulación. Dame las coordenadas." },
+        { "speaker": "luma", "text": "Su núcleo se expone tras cada patrón. Durante los cambios de fase, busca posición: las defensas se retiran." }
+      ] },
+      { "id": "omega-defeated", "trigger": { "type": "event" }, "blocking": true, "lines": [
+        { "speaker": "luma", "text": "Unidad neutralizada. Recupero las coordenadas del planeta donde están retenidos los humanos." },
+        { "speaker": "omega-7", "text": "PIEZOD... tú ya estuviste allí. Ellos te estaban esperando" },
+        { "speaker": "piezod", "text": "No recuerdo ese planeta. Pero esta vez no pienso dejarlos allí." },
+        { "speaker": "luma", "text": "Coordenadas guardadas. La estación fantasma queda atrás. Capítulo 2: Planeta alienígena. Próximamente." }
+      ] }
+    ]
+  }
+}

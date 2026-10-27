@@ -11,13 +11,17 @@ import { DECO, DECO_FRAME_COUNT } from '../src/games/platformer/biomes/biomeArt'
 import { buildCampaign, CampaignManager, type CampaignContext } from '../src/games/platformer/level/CampaignManager';
 import { chapterCards } from '../src/games/platformer/level/campaignView';
 import { type LevelEntry, LevelManager, memoryStorage } from '../src/games/platformer/level/LevelManager';
-import { validateLevel } from '../src/games/platformer/level/LevelValidator';
+import { analyzeReachability, validateLevel } from '../src/games/platformer/level/LevelValidator';
 import { queueLevels } from '../src/games/platformer/level/levelLoader';
 import { buildCatalogs } from '../src/games/platformer/progression/gameData';
 import { hoverPatrol, leashedChase, lungeVelocity, telegraphOn } from '../src/games/platformer/enemies/flight';
 import { nextAiState } from '../src/games/platformer/enemies/ai';
 import { computeDamage, Health } from '../src/games/platformer/combat/damage';
 import { validateObjects } from '../src/games/platformer/objects/validate';
+import type { ElectricFloorConfig, LaserConfig } from '../src/games/platformer/objects/types';
+import { doorShouldBeOpen, hazardEnabled, SignalBus, SwitchModel } from '../src/games/platformer/objects/models';
+import { withObjectSupport } from '../src/games/platformer/objects/reachSupport';
+import { validateBossEncounter } from '../src/games/platformer/level/BossEncounter';
 import { StoryDirector, TYPE_SPEED } from '../src/games/platformer/story/StoryDirector';
 import { validateStory } from '../src/games/platformer/story/validate';
 
@@ -32,12 +36,14 @@ const catalogs = buildCatalogs({
 const BIOME_IDS = Object.keys(BIOMES);
 const EPISODES = ['c1-1-hangar', 'c1-2-corridors', 'c1-3-reactor', 'c1-4-omega'];
 
+let validatedEntries: LevelEntry[] | undefined;
 function realEntries(): LevelEntry[] {
-  return (readJson('levels/levels.json').levels as string[]).map((file, index) => {
+  validatedEntries ??= (readJson('levels/levels.json').levels as string[]).map((file, index) => {
     const validation = validateLevel(readJson(`levels/${file}`), BIOME_IDS, catalogs.enemies.enemies, BIOME_VARIANTS);
     const data = validation.level!;
     return { index, file, id: data.id, name: data.name, biome: data.biome, data, validation };
   });
+  return validatedEntries.map((entry) => ({ ...entry, data: structuredClone(entry.data) }));
 }
 const realContext = (entries = realEntries()): CampaignContext => ({
   levels: entries,
@@ -76,7 +82,7 @@ describe('campaign.json: capítulo 1 (La estación fantasma)', () => {
   });
 
   it('define el capítulo con nombre, descripción, bioma, requisito y cuatro episodios', () => {
-    expect(station).toMatchObject({ name: 'La estación fantasma', order: 1, biome: 'station', unlock: [], plannedLevels: 0, levels: ['c1-1-hangar'], rewards: [] });
+    expect(station).toMatchObject({ name: 'La estación fantasma', order: 1, biome: 'station', unlock: [], plannedLevels: 0, levels: EPISODES, rewards: [] });
     expect(station.description).toMatch(/LUMA/);
     expect(station.episodes.map((e) => e.id)).toEqual(EPISODES);
     expect(station.episodes.map((e) => e.title)).toEqual(['Despertar en el Hangar', 'Pasillos de seguridad', 'El reactor inestable', 'Protocolo OMEGA']);
@@ -105,18 +111,18 @@ describe('campaign.json: capítulo 1 (La estación fantasma)', () => {
   });
 });
 
-describe('el capítulo 1 publica únicamente el Hangar', () => {
+describe('el capítulo 1 publica Hangar, Pasillos y Reactor', () => {
   it('guarda el Hangar sin completar el capítulo ni desbloquear episodios inexistentes', () => {
     const storage = memoryStorage();
     const { campaign } = realCampaign(storage);
     expect(campaign.isLevelUnlocked('c1-1-hangar')).toBe(true);
     expect(campaign.isChapterCompleted('prologue')).toBe(false);
     const result = campaign.complete('c1-1-hangar', { stars: 5, total: 27 });
-    expect(result).toMatchObject({ next: undefined, chapterCompleted: false, unlockedChapters: [] });
+    expect(result).toMatchObject({ next: { id: 'c1-2-corridors' }, chapterCompleted: false, unlockedChapters: [] });
     const restored = realCampaign(storage).campaign;
     expect(restored.progressOfLevel('c1-1-hangar')).toEqual({ stars: 5, total: 27 });
     expect(restored.progressOf('station')).toMatchObject({ completed: 1, total: 4, stars: 5, isCompleted: false });
-    expect(restored.episodesOf('station').map((episode) => [episode.playable, episode.completed])).toEqual([[true, true], [false, false], [false, false], [false, false]]);
+    expect(restored.episodesOf('station').map((episode) => [episode.playable, episode.completed])).toEqual([[true, true], [true, false], [false, false], [false, false]]);
     expect(restored.isChapterUnlocked('alien')).toBe(false);
     expect(restored.progressOf('prologue').completed).toBe(0);
     expect(restored.earnedRewards()).toEqual([]);
@@ -142,12 +148,15 @@ describe('el capítulo 1 publica únicamente el Hangar', () => {
         'assets/platformer/levels/03-ice.json',
         'assets/platformer/levels/04-volcano.json',
         'assets/platformer/levels/chapter1/01-hangar.json',
+        'assets/platformer/levels/chapter1/02-corridors.json',
+        'assets/platformer/levels/chapter1/03-reactor.json',
+        'assets/platformer/levels/chapter1/04-omega.json',
       ]);
       const entries = realEntries();
       const built = buildCampaign(readJson('campaign.json'), realContext(entries));
       expect(built.issues).toEqual([]);
       const campaign = new CampaignManager(built.chapters, new LevelManager(entries, memoryStorage()), built.meta);
-      expect(campaign.chapter('station')).toMatchObject({ status: 'ready', levels: ['c1-1-hangar'] });
+      expect(campaign.chapter('station')).toMatchObject({ status: 'ready', levels: EPISODES });
       expect(campaign.availableChapters().map((chapter) => chapter.id)).toEqual(['prologue', 'station']);
       expect(campaign.episodesOf('station').map((episode) => [episode.playable, episode.completed])).toEqual([[true, false], [false, false], [false, false], [false, false]]);
       expect(campaign.progressOf('prologue').completed).toBe(0);
@@ -163,30 +172,33 @@ describe('el capítulo 1 publica únicamente el Hangar', () => {
     expect(campaign.isChapterCompleted('prologue')).toBe(true);
     expect(campaign.isChapterUnlocked('station')).toBe(true);
     expect(campaign.availableChapters().map((c) => c.id)).toEqual(['prologue', 'station']);
-    expect(campaign.levelsOf('station').map((entry) => entry.id)).toEqual(['c1-1-hangar']);
+    expect(campaign.levelsOf('station').map((entry) => entry.id)).toEqual(EPISODES);
     expect(campaign.nextChapter('prologue')?.id).toBe('station');
   });
 
-  it('solo el Hangar tiene nivel y está disponible sin completar el prólogo', () => {
+  it('Hangar está disponible y Pasillos espera a completarlo, sin exigir el prólogo', () => {
     const { campaign } = realCampaign();
     const info = campaign.episodesOf('station');
     expect(info).toHaveLength(4);
     expect(info.map((i) => [i.level?.id, i.playable, i.completed])).toEqual([
       ['c1-1-hangar', true, false],
-      [undefined, false, false],
-      [undefined, false, false],
-      [undefined, false, false],
+      ['c1-2-corridors', false, false],
+      ['c1-3-reactor', false, false],
+      ['c1-4-omega', false, false],
     ]);
     expect(campaign.episodesOf('prologue')).toEqual([]);
     expect(campaign.episodesOf('nope')).toEqual([]);
   });
 
-  it('el registro solo carga el primer episodio, sin referencias a archivos futuros', () => {
+  it('el registro carga los cuatro episodios y todos sus archivos existen', () => {
     const registry = readJson('levels/levels.json').levels as string[];
-    expect(registry).toHaveLength(5);
+    expect(registry).toHaveLength(8);
     expect(registry[4]).toBe('chapter1/01-hangar.json');
-    expect(realEntries().filter((entry) => EPISODES.includes(entry.id)).map((entry) => entry.id)).toEqual(['c1-1-hangar']);
-    expect(readJson('campaign.json').chapters[1].levels).toEqual(['c1-1-hangar']);
+    expect(registry[5]).toBe('chapter1/02-corridors.json');
+    expect(registry[6]).toBe('chapter1/03-reactor.json');
+    expect(registry[7]).toBe('chapter1/04-omega.json');
+    expect(realEntries().filter((entry) => EPISODES.includes(entry.id)).map((entry) => entry.id)).toEqual(EPISODES);
+    expect(readJson('campaign.json').chapters[1].levels).toEqual(EPISODES);
   });
 
   it('los cuatro niveles originales mantienen id, nombre, bioma y estrellas', () => {
@@ -223,7 +235,7 @@ describe('partidas guardadas anteriores', () => {
 
   it('resultados de niveles que aún no existen se ignoran sin romper el progreso', () => {
     const storage = memoryStorage();
-    storage.save(JSON.stringify({ version: 2, best: { 'forest-1': { stars: 5, total: 37 }, 'c1-2-corridors': { stars: 3, total: 3 } } }));
+    storage.save(JSON.stringify({ version: 2, best: { 'forest-1': { stars: 5, total: 37 }, 'future-alien': { stars: 3, total: 3 } } }));
     const { campaign } = realCampaign(storage);
     expect(campaign.progressOf('prologue').completed).toBe(1);
     expect(campaign.progressOf('station').completed).toBe(0);
@@ -277,7 +289,8 @@ describe('cómo se activará el capítulo 1', () => {
   });
 
   it('un episodio con jefe exige un enemigo marcado como jefe en enemies.json', () => {
-    expect(withFuture(ready(), { ...catalogs.enemies.enemies }).issues.map((i) => i.message).join()).toMatch(/"omega-7" no es un jefe/);
+    const { ['omega-7']: _omega, ...withoutOmega } = catalogs.enemies.enemies;
+    expect(withFuture(ready(), withoutOmega).issues.map((i) => i.message).join()).toMatch(/"omega-7" no es un jefe/);
     expect(withFuture(ready(), { ...catalogs.enemies.enemies, 'omega-7': { boss: false } as never }).issues.map((i) => i.message).join()).toMatch(/no es un jefe/);
     expect(withFuture(ready(), { ...catalogs.enemies.enemies, 'magma-king': catalogs.enemies.enemies['magma-king'], 'omega-7': catalogs.enemies.enemies['magma-king'] }).issues).toEqual([]);
   });
@@ -360,6 +373,411 @@ describe('validación de episodios y metadatos', () => {
     expect(result.issues).toEqual([]);
     expect(result.meta).toBeNull();
     expect(result.chapters[1].episodes).toEqual([]);
+  });
+});
+
+describe('Pasillos de seguridad: integración', () => {
+  const raw = readJson('levels/chapter1/02-corridors.json');
+  const validation = validateLevel(raw, BIOME_IDS, catalogs.enemies.enemies, BIOME_VARIANTS);
+  const parsed = validation.parsed!;
+  const size = { width: parsed.width, height: parsed.height };
+  const objectCheck = validateObjects(raw.objects, size);
+  const objects = objectCheck.objects;
+  const story = validateStory(raw.story, size);
+
+  it('carga siete secciones válidas y alcanzables sin habilidades, con checkpoint y coleccionables opcionales', () => {
+    expect(validation.issues).toEqual([]);
+    expect(validation.ok).toBe(true);
+    expect(parsed).toMatchObject({ id: 'c1-2-corridors', biome: 'station', variant: 'corridors', width: 1120, height: 28 });
+    expect(raw.sections.map((section: { name: string }) => section.name)).toEqual([
+      'Entrada y primer registro', 'Pasillo defensivo', 'Puertas e interruptores',
+      'Encuentro blindado', 'Ascenso de mantenimiento', 'Bloqueo de seguridad', 'Sala de registros',
+    ]);
+    expect(parsed.checkpoints).toEqual([{ col: 626, row: 24 }]);
+    expect(parsed.stars).toHaveLength(51);
+    expect(parsed.portals).toEqual([{ col: 1108, row: 24 }]);
+    expect(validation.reach!.touched.has('1108,24')).toBe(true);
+  });
+
+  it('mantiene encuentros deliberados y zonas de descanso sin enemigos', () => {
+    expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DTRG]/g) ?? [])).toEqual([
+      [], ['T'], ['G'], ['D', 'T'], ['D', 'D'], ['D', 'G'], ['R', 'G'],
+    ]);
+    expect(parsed.enemies).toHaveLength(10);
+    expect(parsed.enemies.every((enemy) => ['drone-scout', 'auto-turret', 'auto-turret-right', 'armored-guardian'].includes(enemy.type))).toBe(true);
+    const guardian = parsed.enemies.find((enemy) => enemy.col > 320 && enemy.col < 480 && enemy.type === 'armored-guardian')!;
+    expect(catalogs.enemies.enemies[guardian.type].maxHealth).toBe(4);
+    const checkpoint = parsed.checkpoints[0];
+    for (const enemy of parsed.enemies) {
+      const def = catalogs.enemies.enemies[enemy.type];
+      const reach = (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + Math.max(def.detectRange, def.attack!.range) + (def.attack!.kind === 'lunge' ? def.attack!.power * 0.35 : 0);
+      expect(Math.hypot((checkpoint.col - enemy.col) * 16, (checkpoint.row - enemy.row) * 16)).toBeGreaterThan(reach);
+    }
+  });
+
+  it('reutiliza plataformas, láseres, palancas y puertas con referencias válidas y avisos', () => {
+    expect(objectCheck.issues).toEqual([]);
+    expect(objects.filter((object) => object.type === 'movingPlatform')).toHaveLength(3);
+    expect(objects.filter((object) => object.type === 'laser')).toHaveLength(4);
+    expect(objects.filter((object) => object.type === 'switch')).toHaveLength(5);
+    expect(objects.filter((object) => object.type === 'door')).toHaveLength(5);
+    expect(objects.filter((object) => object.type === 'laser').every((laser) => laser.warning >= 0.8 && laser.off >= 1.2)).toBe(true);
+    const invalid = structuredClone(raw);
+    invalid.objects.find((object: { type: string }) => object.type === 'door').opensWith = 'missing';
+    expect(validateObjects(invalid.objects, size).ok).toBe(false);
+  });
+
+  it('resuelve ambos circuitos de puertas y anula los láseres sin temporizadores que bloqueen el respawn', () => {
+    const bus = new SignalBus();
+    const switches = objects.filter((object) => object.type === 'switch');
+    expect(switches.every((config) => config.duration === 0)).toBe(true);
+    const models = new Map(switches.map((config) => [config.id, new SwitchModel(config.id!, config.duration, bus)]));
+    const doors = objects.filter((object) => object.type === 'door');
+    const gate = (id: string) => {
+      const config = doors.find((door) => door.id === id)!;
+      return doorShouldBeOpen(config.opensWith, config.inverted, bus);
+    };
+    expect(gate('gate-a')).toBe(false);
+    models.get('circuit-a')!.activate();
+    expect(gate('gate-a')).toBe(true);
+    expect(gate('gate-b')).toBe(false);
+    models.get('circuit-b')!.activate();
+    expect(gate('gate-b')).toBe(true);
+    for (const id of ['override-a', 'override-b']) models.get(id)!.activate();
+    const lasers = objects.filter((object): object is LaserConfig => object.type === 'laser' && !!object.disabledBy);
+    expect(lasers.every((laser) => !hazardEnabled(laser, bus))).toBe(true);
+    for (const model of models.values()) model.update(300);
+    expect(gate('lockdown-door-b')).toBe(true);
+    for (const model of models.values()) model.reset();
+    expect(gate('gate-a')).toBe(false);
+    expect(lasers.every((laser) => hazardEnabled(laser, bus))).toBe(true);
+  });
+
+  it('permite alcanzar las palancas antes de abrir sus propias puertas', () => {
+    const supported = withObjectSupport(parsed, objects);
+    const reachWith = (signals: readonly string[]) => {
+      const bus = new SignalBus();
+      for (const signal of signals) bus.set(signal, true);
+      const terrain = supported.terrain.map((row) => [...row]);
+      for (const door of objects.filter((object) => object.type === 'door')) {
+        if (doorShouldBeOpen(door.opensWith, door.inverted, bus)) continue;
+        for (let row = door.row; row < door.row + door.height; row++) terrain[row][door.col] = 'stone';
+      }
+      return analyzeReachability({ ...supported, terrain }).touched;
+    };
+    expect(reachWith([]).has('368,20')).toBe(true);
+    expect(reachWith([]).has('414,24')).toBe(false);
+    expect(reachWith(['circuit-a']).has('414,24')).toBe(true);
+    expect(reachWith(['circuit-a', 'circuit-b']).has('657,24')).toBe(true);
+    expect(reachWith(['circuit-a', 'circuit-b', 'maintenance-power', 'override-a']).has('860,21')).toBe(true);
+  });
+
+  it('cuenta la captura y el transporte humano con registros breves y una sala final segura', () => {
+    expect(story.issues).toEqual([]);
+    expect(story.beats.filter((beat) => beat.blocking).map((beat) => beat.id)).toEqual(['transport-record']);
+    expect(story.beats.filter((beat) => !beat.blocking).every((beat) => beat.lines.length === 1)).toBe(true);
+    const narrative = story.beats.flatMap((beat) => beat.lines.map((line) => line.text)).join(' ');
+    expect(narrative).toMatch(/NÉXAR reprogramaron/);
+    expect(narrative).toMatch(/prisioneros humanos.*fuera de la estación/);
+    const final = story.beats.find((beat) => beat.id === 'transport-record')!.trigger;
+    expect(final.type).toBe('zone');
+    if (final.type !== 'zone') return;
+    for (const enemy of parsed.enemies) {
+      const def = catalogs.enemies.enemies[enemy.type];
+      expect((final.col - enemy.col) * 16).toBeGreaterThan(def.detectRange + (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + 400);
+    }
+  });
+
+  it('desbloquea el episodio 2 solo tras completar Hangar y mantiene el reactor pendiente', () => {
+    const storage = memoryStorage();
+    const { campaign } = realCampaign(storage);
+    expect(campaign.isLevelUnlocked('c1-1-hangar')).toBe(true);
+    expect(campaign.isLevelUnlocked('c1-2-corridors')).toBe(false);
+    expect(campaign.episodesOf('station')[1].level?.id).toBe('c1-2-corridors');
+    const completion = campaign.complete('c1-1-hangar', { stars: 3, total: 27 });
+    expect(completion.next?.id).toBe('c1-2-corridors');
+    expect(completion.chapterCompleted).toBe(false);
+    const restored = realCampaign(storage).campaign;
+    expect(restored.isLevelUnlocked('c1-2-corridors')).toBe(true);
+    expect(restored.isLevelCompleted('c1-2-corridors')).toBe(false);
+    expect(restored.episodesOf('station')[2]).toMatchObject({ playable: false, completed: false });
+    expect(restored.episodesOf('station')[3]).toMatchObject({ playable: false });
+    expect(restored.progressOf('prologue').completed).toBe(0);
+  });
+
+  it('conserva una partida anterior del Hangar y guarda la victoria de Pasillos abriendo el reactor', () => {
+    const storage = memoryStorage();
+    const saved = JSON.stringify({ version: 2, best: { 'forest-1': { stars: 7, total: 37 }, 'c1-1-hangar': { stars: 10, total: 27 } } });
+    storage.save(saved);
+    const { campaign } = realCampaign(storage);
+    expect(storage.load()).toBe(saved);
+    expect(campaign.isLevelUnlocked('c1-2-corridors')).toBe(true);
+    const completed = campaign.complete('c1-2-corridors', { stars: 20, total: 51 });
+    expect(completed).toMatchObject({ next: { id: 'c1-3-reactor' }, chapterCompleted: false, unlockedChapters: [] });
+    const restored = realCampaign(storage).campaign;
+    expect(restored.progressOfLevel('c1-2-corridors')).toEqual({ stars: 20, total: 51 });
+    expect(restored.progressOf('station')).toMatchObject({ completed: 2, total: 4, isCompleted: false });
+    expect(restored.progressOfLevel('forest-1')).toEqual({ stars: 7, total: 37 });
+    expect(restored.progressOfLevel('c1-1-hangar')).toEqual({ stars: 10, total: 27 });
+    expect(restored.episodesOf('station')[2]).toMatchObject({ playable: true, completed: false });
+    expect(restored.earnedRewards()).toEqual([]);
+  });
+});
+
+describe('El reactor inestable: integración', () => {
+  const raw = readJson('levels/chapter1/03-reactor.json');
+  const validation = validateLevel(raw, BIOME_IDS, catalogs.enemies.enemies, BIOME_VARIANTS);
+  const parsed = validation.parsed!;
+  const size = { width: parsed.width, height: parsed.height };
+  const objectCheck = validateObjects(raw.objects, size);
+  const objects = objectCheck.objects;
+  const story = validateStory(raw.story, size);
+  const controls = ['regulator-a', 'regulator-b', 'regulator-c', 'isolate-extraction'];
+
+  it('carga ocho secciones, 64 coleccionables y una salida alcanzable sin habilidades', () => {
+    expect(validation.issues).toEqual([]);
+    expect(validation.ok).toBe(true);
+    expect(parsed).toMatchObject({ id: 'c1-3-reactor', biome: 'station', variant: 'reactor', width: 1600, height: 28 });
+    expect(raw.sections.map((section: { name: string }) => section.name)).toEqual([
+      'Acceso al reactor', 'Suelos electrificados', 'Transporte sobre conductores', 'Combate de drones',
+      'Sala de regulacion', 'Defensas del reactor', 'Sobrecarga del reactor', 'Escape al nucleo de seguridad',
+    ]);
+    expect(parsed.stars).toHaveLength(64);
+    expect(parsed.portals).toEqual([{ col: 1588, row: 24 }]);
+    expect(validation.reach!.touched.has('1588,24')).toBe(true);
+    expect(parsed.checkpoints).toEqual([{ col: 191, row: 24 }, { col: 790, row: 24 }, { col: 1190, row: 24 }, { col: 1390, row: 24 }]);
+  });
+
+  it('combina progresivamente los cinco objetos y conserva ventanas de aviso y refugio', () => {
+    expect(objectCheck.issues).toEqual([]);
+    for (const [type, count] of [['electricFloor', 13], ['movingPlatform', 6], ['laser', 5], ['switch', 4], ['door', 5]] as const) {
+      expect(objects.filter((object) => object.type === type)).toHaveLength(count);
+    }
+    const hazards = objects.filter((object) => object.type === 'laser' || object.type === 'electricFloor').sort((first, second) => first.col - second.col);
+    expect(hazards.every((hazard) => hazard.warning >= 0.9 && hazard.off >= 1.3 && hazard.damage === 1)).toBe(true);
+    for (let index = 1; index < hazards.length; index++) {
+      const previous = hazards[index - 1];
+      const end = previous.col + (previous.type === 'electricFloor' ? previous.width : 1);
+      expect(hazards[index].col - end).toBeGreaterThanOrEqual(8);
+    }
+    expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DNTRGEJ]/g) ?? [])).toEqual([
+      [], ['E', 'J'], ['E', 'J'], ['E', 'D', 'N', 'J'], [], ['E', 'T', 'G', 'J'], [], ['E', 'E', 'J', 'G'],
+    ]);
+  });
+
+  it('protege los checkpoints y el anuncio final de enemigos y peligros inevitables', () => {
+    const hazards = objects.filter((object) => object.type === 'laser' || object.type === 'electricFloor');
+    for (const checkpoint of parsed.checkpoints) {
+      for (const enemy of parsed.enemies) {
+        const def = catalogs.enemies.enemies[enemy.type];
+        const reach = Math.max(def.detectRange, def.attack?.range ?? 0) + (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + (def.attack?.kind === 'lunge' ? def.attack.power * 0.35 : 0);
+        expect(Math.hypot((checkpoint.col - enemy.col) * 16, (checkpoint.row - enemy.row) * 16)).toBeGreaterThan(reach);
+      }
+      expect(hazards.every((hazard) => checkpoint.col < hazard.col - 8 || checkpoint.col > hazard.col + (hazard.type === 'electricFloor' ? hazard.width : 1) + 8)).toBe(true);
+    }
+    const terminal = story.beats.find((beat) => beat.id === 'omega-protocol')!.trigger;
+    if (terminal.type !== 'zone') throw new Error('Missing terminal zone');
+    for (const enemy of parsed.enemies) {
+      const def = catalogs.enemies.enemies[enemy.type];
+      expect((terminal.col - enemy.col) * 16).toBeGreaterThan(def.detectRange + (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + 400);
+    }
+  });
+
+  it('introduce ambos enemigos por separado y exige plataformas para el encuentro final', () => {
+    const introductions = parsed.enemies.filter((enemy) => enemy.col >= 200 && enemy.col < 400);
+    expect(introductions.map((enemy) => enemy.type)).toEqual(['electric-drone', 'nexar-technician']);
+    expect((introductions[1].col - introductions[0].col) * 16).toBeGreaterThan(2 * 112 + 40);
+    const escape = parsed.enemies.filter((enemy) => enemy.col >= 1400);
+    expect(escape.map((enemy) => enemy.type)).toEqual(['electric-drone', 'electric-drone', 'nexar-technician', 'armored-guardian']);
+    const bus = new SignalBus();
+    controls.forEach((id) => bus.set(id, true));
+    const escapeHazards = objects.filter((object): object is LaserConfig | ElectricFloorConfig => (object.type === 'laser' || object.type === 'electricFloor') && object.col >= 1400);
+    expect(escapeHazards.every((hazard) => hazardEnabled(hazard, bus))).toBe(true);
+    const fromEscape = { ...parsed, spawn: { col: 1408, row: 24 } };
+    const missingLift = objects.filter((object) => object.id !== 'escape-lift');
+    expect(analyzeReachability(withObjectSupport(fromEscape, missingLift)).touched.has('1588,24')).toBe(false);
+    expect(analyzeReachability(withObjectSupport(fromEscape, objects)).touched.has('1588,24')).toBe(true);
+  });
+
+  it('los reguladores y el aislamiento abren puertas y detienen la extracción de verdad', () => {
+    const bus = new SignalBus();
+    const switches = objects.filter((object) => object.type === 'switch');
+    expect(switches.map((config) => config.id)).toEqual(controls);
+    expect(switches.every((config) => config.duration === 0)).toBe(true);
+    const models = new Map(switches.map((config) => [config.id, new SwitchModel(config.id!, config.duration, bus)]));
+    const gates = objects.filter((object) => object.type === 'door');
+    const opened = (id: string) => {
+      const gate = gates.find((door) => door.id === id)!;
+      return doorShouldBeOpen(gate.opensWith, gate.inverted, bus);
+    };
+    expect(opened('stabilized-gate')).toBe(false);
+    models.get('regulator-a')!.activate();
+    expect(opened('regulator-door-a')).toBe(true);
+    expect(opened('regulator-door-b')).toBe(false);
+    models.get('regulator-b')!.activate();
+    expect(opened('regulator-door-b')).toBe(true);
+    models.get('regulator-c')!.activate();
+    expect(opened('regulator-door-c')).toBe(true);
+    expect(opened('stabilized-gate')).toBe(false);
+    models.get('isolate-extraction')!.activate();
+    expect(opened('stabilized-gate')).toBe(true);
+    expect(opened('security-access')).toBe(true);
+    const controlledHazards = objects.filter((object): object is LaserConfig | ElectricFloorConfig => (object.type === 'laser' || object.type === 'electricFloor') && !!object.disabledBy);
+    expect(controlledHazards.every((hazard) => !hazardEnabled(hazard, bus))).toBe(true);
+    for (const model of models.values()) model.update(900);
+    expect(opened('security-access')).toBe(true);
+    for (const model of models.values()) model.reset();
+    expect(opened('security-access')).toBe(false);
+  });
+
+  it('no permite saltarse la regulación ni entrar al escape sin aislar la extracción', () => {
+    const supported = withObjectSupport(parsed, objects);
+    const reachWith = (signals: readonly string[]) => {
+      const bus = new SignalBus();
+      for (const signal of signals) bus.set(signal, true);
+      const terrain = supported.terrain.map((row) => [...row]);
+      for (const door of objects.filter((object) => object.type === 'door')) {
+        if (doorShouldBeOpen(door.opensWith, door.inverted, bus)) continue;
+        for (let row = door.row; row < door.row + door.height; row++) terrain[row][door.col] = 'stone';
+      }
+      return analyzeReachability({ ...supported, terrain }).touched;
+    };
+    const closed = reachWith([]);
+    expect(closed.has('836,20')).toBe(true);
+    expect(closed.has('886,24')).toBe(false);
+    const first = reachWith(['regulator-a']);
+    expect(first.has('886,24')).toBe(true);
+    expect(first.has('960,20')).toBe(false);
+    expect(reachWith(['regulator-a', 'regulator-b']).has('960,20')).toBe(true);
+    const regulated = reachWith(controls.slice(0, 3));
+    expect(regulated.has('1338,20')).toBe(true);
+    expect(regulated.has('1372,24')).toBe(false);
+    expect(regulated.has('1588,24')).toBe(false);
+    expect(reachWith(controls).has('1588,24')).toBe(true);
+  }, 15000);
+
+  it('continúa la historia de Pasillos y termina con el anuncio exacto de LUMA', () => {
+    expect(story.issues).toEqual([]);
+    expect(story.beats.filter((beat) => beat.blocking).map((beat) => beat.id)).toEqual(['omega-protocol']);
+    const text = story.beats.flatMap((beat) => beat.lines.map((line) => line.text)).join(' ');
+    expect(text).toMatch(/Pasillos/);
+    expect(text).toMatch(/energía para transportar prisioneros/);
+    const director = new StoryDirector(story.beats, false);
+    director.checkZones({ x: 1556 * 16, y: 24 * 16, width: 12, height: 22 });
+    expect(director.blocking).toBe(true);
+    expect(director.view?.text).toBe('Protocolo OMEGA activado. Unidad de defensa OMEGA-7 en funcionamiento');
+  });
+
+  it('desbloquea el reactor tras Pasillos sin completar automáticamente ningún episodio', () => {
+    const storage = memoryStorage();
+    const { campaign } = realCampaign(storage);
+    expect(campaign.episodesOf('station')[2].level?.id).toBe('c1-3-reactor');
+    expect(campaign.isLevelUnlocked('c1-3-reactor')).toBe(false);
+    campaign.complete('c1-1-hangar', { stars: 0, total: 27 });
+    expect(campaign.isLevelUnlocked('c1-3-reactor')).toBe(false);
+    const result = campaign.complete('c1-2-corridors', { stars: 0, total: 51 });
+    expect(result.next?.id).toBe('c1-3-reactor');
+    const restored = realCampaign(storage).campaign;
+    expect(restored.isLevelUnlocked('c1-3-reactor')).toBe(true);
+    expect(restored.isLevelCompleted('c1-3-reactor')).toBe(false);
+    expect(restored.isLevelUnlocked('c1-4-omega')).toBe(false);
+    expect(restored.progressOf('prologue').completed).toBe(0);
+  });
+
+  it('conserva las partidas de Pasillos y persiste la victoria sin inventar el episodio de OMEGA', () => {
+    const storage = memoryStorage();
+    const saved = JSON.stringify({ version: 2, best: { 'c1-1-hangar': { stars: 4, total: 27 }, 'c1-2-corridors': { stars: 8, total: 51 } } });
+    storage.save(saved);
+    const { campaign } = realCampaign(storage);
+    expect(storage.load()).toBe(saved);
+    expect(campaign.isLevelUnlocked('c1-3-reactor')).toBe(true);
+    const completion = campaign.complete('c1-3-reactor', { stars: 23, total: 64 });
+    expect(completion).toMatchObject({ next: { id: 'c1-4-omega' }, chapterCompleted: false, unlockedChapters: [] });
+    const restored = realCampaign(storage).campaign;
+    expect(restored.progressOfLevel('c1-1-hangar')).toEqual({ stars: 4, total: 27 });
+    expect(restored.progressOfLevel('c1-2-corridors')).toEqual({ stars: 8, total: 51 });
+    expect(restored.progressOfLevel('c1-3-reactor')).toEqual({ stars: 23, total: 64 });
+    expect(restored.progressOf('station')).toMatchObject({ completed: 3, total: 4, isCompleted: false });
+    expect(restored.episodesOf('station')[3]).toMatchObject({ playable: true, completed: false });
+    expect(restored.earnedRewards()).toEqual([]);
+  });
+});
+
+describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
+  const raw = readJson('levels/chapter1/04-omega.json');
+  const validation = validateLevel(raw, BIOME_IDS, catalogs.enemies.enemies, BIOME_VARIANTS);
+  const parsed = validation.parsed!;
+  const story = validateStory(raw.story, { width: parsed.width, height: parsed.height });
+  const checked = validateBossEncounter(raw.bossEncounter, parsed, story.beats, catalogs.enemies.enemies);
+  const encounter = checked.encounter!;
+  const objects = validateObjects(raw.objects, { width: parsed.width, height: parsed.height, externalSignals: Object.values(encounter.signals) });
+
+  it('valida nivel, recursos, jefe único y señales reales del escenario', () => {
+    expect(validation.issues).toEqual([]);
+    expect(validation.ok).toBe(true);
+    expect(checked.issues).toEqual([]);
+    expect(objects.issues).toEqual([]);
+    expect(parsed).toMatchObject({ id: 'c1-4-omega', biome: 'station', variant: 'boss', width: 740 });
+    expect(parsed.enemies.filter((enemy) => enemy.type === 'omega-7')).toEqual([{ col: 650, row: 24, type: 'omega-7' }]);
+    expect(catalogs.enemies.enemies['omega-7']).toMatchObject({ boss: true, healthBar: true, maxHealth: 20, armor: 0 });
+    expect(parsed.checkpoints).toEqual([{ col: 629, row: 24 }]);
+    expect(parsed.portals).toEqual([{ col: 730, row: 24 }]);
+    const hazards = objects.objects.filter((object): object is LaserConfig | ElectricFloorConfig => (object.type === 'laser' || object.type === 'electricFloor') && object.enabledBy === encounter.signals.hazards);
+    expect(hazards).toHaveLength(4);
+    expect(hazards.every((hazard) => hazard.warning >= 0.9 && hazard.damage === 1)).toBe(true);
+    const bus = new SignalBus();
+    expect(hazards.every((hazard) => !hazardEnabled(hazard, bus))).toBe(true);
+    bus.set(encounter.signals.hazards, true);
+    expect(hazards.every((hazard) => hazardEnabled(hazard, bus))).toBe(true);
+    bus.set(encounter.signals.hazards, false);
+    expect(hazards.every((hazard) => !hazardEnabled(hazard, bus))).toBe(true);
+  });
+
+  it('mantiene checkpoint y refugios fuera de la aproximación enemiga', () => {
+    const checkpoint = parsed.checkpoints[0];
+    for (const enemy of parsed.enemies.filter((entry) => entry.type !== 'omega-7')) {
+      const def = catalogs.enemies.enemies[enemy.type];
+      const range = def.detectRange + (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + 400;
+      expect((checkpoint.col - enemy.col) * 16).toBeGreaterThan(range);
+    }
+    const arenaHazards = objects.objects.filter((object) => (object.type === 'laser' || object.type === 'electricFloor') && object.enabledBy === encounter.signals.hazards);
+    expect(arenaHazards.every((hazard) => hazard.col < 645 || hazard.col >= 657)).toBe(true);
+    expect(parsed.terrain[22][645]).toBe('oneway');
+    expect(parsed.terrain[22][654]).toBe('oneway');
+  });
+
+  it('reconoce la armadura y cuenta la derrota mediante los diálogos existentes', () => {
+    const director = new StoryDirector(story.beats, false);
+    director.start();
+    director.trigger(encounter.intro);
+    expect(director.blocking).toBe(true);
+    expect(director.view?.text).toMatch(/Armadura PIEZOD.*no fue accidental/);
+    while (director.blocking) { director.advance(); director.advance(); }
+    director.trigger(encounter.victory);
+    const ending = story.beats.find((beat) => beat.id === encounter.victory)!;
+    expect(ending.lines.some((line) => line.text === 'PIEZOD... tú ya estuviste allí. Ellos te estaban esperando')).toBe(true);
+    expect(ending.lines[0].text).toMatch(/coordenadas del planeta/);
+    expect(ending.lines.at(-1)!.text).toMatch(/Capítulo 2.*Próximamente/);
+  });
+
+  it('desbloquea OMEGA solo con Reactor y persiste el cierre sin abrir el capítulo 2', () => {
+    const storage = memoryStorage();
+    const { campaign } = realCampaign(storage);
+    expect(campaign.availableChapters().map((chapter) => chapter.id)).toEqual(['prologue', 'station']);
+    expect(campaign.isLevelUnlocked('c1-4-omega')).toBe(false);
+    for (const id of EPISODES.slice(0, 2)) campaign.complete(id, { stars: 0, total: realEntries().find((entry) => entry.id === id)!.validation.parsed!.stars.length });
+    expect(campaign.isLevelUnlocked('c1-4-omega')).toBe(false);
+    expect(campaign.complete('c1-3-reactor', { stars: 0, total: 64 }).next?.id).toBe('c1-4-omega');
+    expect(campaign.isLevelUnlocked('c1-4-omega')).toBe(true);
+    const done = campaign.complete('c1-4-omega', { stars: 4, total: parsed.stars.length });
+    expect(done).toMatchObject({ chapterCompleted: true, next: undefined, unlockedChapters: [] });
+    const restored = realCampaign(storage).campaign;
+    expect(restored.progressOf('station')).toMatchObject({ completed: 4, total: 4, isCompleted: true });
+    expect(restored.progressOfLevel('c1-4-omega')?.stars).toBe(4);
+    expect(restored.chapter('alien')?.status).toBe('planned');
+    expect(restored.isChapterUnlocked('alien')).toBe(false);
+    expect(restored.earnedRewards()).toEqual([]);
+    expect(restored.progressOf('prologue').completed).toBe(0);
   });
 });
 

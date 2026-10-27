@@ -13,6 +13,7 @@ export interface PatrolZone {
   bob: number;
   leash: number;
   standoff?: number;
+  axis?: 'x' | 'y';
 }
 
 export const isFlying = (def: Pick<EnemyDef, 'movement'>): boolean => def.movement === 'fly' || def.movement === 'hover';
@@ -28,6 +29,8 @@ export interface EnemyAttack {
   power: number;
   /** Seconds the enemy stops and flashes before the attack lands (0 = no warning). */
   telegraph: number;
+  recovery?: number;
+  projectile?: 'fireball' | 'energy';
   /** Element of the attack; defaults to the enemy's element. */
   element: string | null;
 }
@@ -44,6 +47,9 @@ export interface EnemyDef {
   maxHealth: number;
   contactDamage: number;
   speed: number;
+  facing?: 'left' | 'right';
+  fixedFacing?: boolean;
+  patrolRange?: number;
   armor: number;
   /** Main elemental type (elements.json id). */
   element: string | null;
@@ -196,12 +202,17 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
           damage: n('damage', 0, 10, 1),
           power: n('power', 10, 600, 100),
           telegraph: n('telegraph', 0, 2, 0),
+          recovery: n('recovery', 0, 3, 0),
           element: typeof a.element === 'string' ? a.element : element,
+          projectile: a.projectile === 'energy' ? 'energy' : 'fireball',
         };
+        if (a.projectile !== undefined && !['fireball', 'energy'].includes(a.projectile as string)) errors.push('"attack.projectile" debe ser fireball o energy');
         if (typeof a.element === 'string' && !isElement(a.element)) errors.push(`"attack.element" desconocido: ${a.element}`);
       }
     }
     const movement = oneOf('movement', MOVEMENTS, 'patrol');
+    const facing = oneOf('facing', ['left', 'right'] as const, 'left');
+    if (r.fixedFacing !== undefined && typeof r.fixedFacing !== 'boolean') errors.push('"fixedFacing" debe ser true o false');
     let patrol: PatrolZone | null = null;
     if (r.patrol !== undefined && movement !== 'hover') errors.push('"patrol" solo se usa con "movement": "hover"');
     else if (movement === 'hover') {
@@ -213,7 +224,8 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
           if (typeof value !== 'number' || value < min || value > max) errors.push(`"patrol.${key}" debe estar entre ${min} y ${max}`);
           return typeof value === 'number' ? value : fallback;
         };
-        patrol = { range: z('range', 8, 400, 64), bob: z('bob', 0, 24, 6), leash: z('leash', 0, 200, 48), standoff: z('standoff', 0, 160, 0) };
+        if (p.axis !== undefined && p.axis !== 'x' && p.axis !== 'y') errors.push('"patrol.axis" debe ser x o y');
+        patrol = { range: z('range', 8, 400, 64), bob: z('bob', 0, 24, 6), leash: z('leash', 0, 200, 48), standoff: z('standoff', 0, 160, 0), axis: p.axis === 'y' ? 'y' : 'x' };
       }
     }
     const def: EnemyDef = {
@@ -225,6 +237,9 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
       maxHealth,
       contactDamage: num('contactDamage', 0, 10, 1),
       speed: num('speed', 0, 200, 30),
+      facing,
+      fixedFacing: r.fixedFacing === true,
+      patrolRange: r.patrolRange === undefined ? undefined : num('patrolRange', 8, 400),
       armor: num('armor', 0, 99, 0),
       element,
       resist,

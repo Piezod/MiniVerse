@@ -42,7 +42,8 @@ export class PlatformerLevelSelectScene extends Phaser.Scene {
     const rnd = new Phaser.Math.RandomDataGenerator(['levels']);
     for (let i = 0; i < 50; i++) this.add.rectangle(rnd.between(0, GAME_WIDTH), rnd.between(0, GAME_HEIGHT), 1, 1, 0xfff3d6, rnd.realInRange(0.2, 0.8));
 
-    pixelText(this, GAME_WIDTH / 2, 16, chapter.name, hex(PALETTE.gold), 2).setOrigin(0.5).setMaxWidth(GAME_WIDTH - 140);
+    const title = pixelText(this, GAME_WIDTH / 2, 16, chapter.name, hex(PALETTE.gold), 2).setOrigin(0.5);
+    if (title.width > GAME_WIDTH - 140) title.setScale((GAME_WIDTH - 140) / title.width * title.scaleX);
     pixelText(this, GAME_WIDTH / 2, 32, 'Elige un nivel', 0x9a86c4).setOrigin(0.5);
 
     const back = this.add.rectangle(30, 12, 50, 14, 0x141327, 0.6).setStrokeStyle(1, 0xfff8ec, 0.5).setInteractive({ useHandCursor: true });

@@ -183,3 +183,118 @@ export function drawSentinelFrame(ctx: Ctx, frame: number, w: number, h: number)
   px(ctx, P.metalLight, 14, 3 + bob, 4, 1);
   finish(ctx, w, h);
 }
+
+export function drawTurretFrame(ctx: Ctx, frame: number, w: number, h: number): void {
+  if (frame === 3) {
+    px(ctx, P.metalDark, 3, 19, 18, 5);
+    px(ctx, P.metal, 8, 16, 8, 4);
+    px(ctx, P.heart, 10, 19, 3, 1);
+  } else {
+    px(ctx, P.metalDark, 3, 20, 18, 4);
+    px(ctx, P.metalLight, 4, 20, 16, 1);
+    px(ctx, P.metal, 9, 15, 7, 5);
+    px(ctx, P.metalDark, 6, 6, 15, 11);
+    px(ctx, P.metalLight, 7, 6, 13, 2);
+    px(ctx, P.goldDark, 16, 9, 4, 5);
+    px(ctx, P.metal, 1, 10, 12, 4);
+    px(ctx, P.outline, 0, 11, 3, 2);
+    px(ctx, frame === 2 ? P.heart : P.glow, 7, 9, 3, 2);
+    px(ctx, frame === 1 ? P.gold : P.glowDark, 18, 4, 2, 1);
+    if (frame === 2) px(ctx, P.goldLight, 0, 9, 2, 6);
+  }
+  finish(ctx, w, h);
+}
+
+export function drawGuardianFrame(ctx: Ctx, frame: number, w: number, h: number): void {
+  if (frame === 3) {
+    px(ctx, P.metalDark, 3, 25, 18, 7);
+    px(ctx, P.goldDark, 4, 24, 6, 5);
+    px(ctx, P.heart, 13, 26, 3, 2);
+  } else {
+    const stride = frame === 1 ? 2 : 0;
+    px(ctx, P.metalDark, 6 + stride, 23, 5, 9);
+    px(ctx, P.metalDark, 15 - stride, 23, 5, 9);
+    px(ctx, P.metal, 6, 10, 14, 15);
+    px(ctx, P.metalLight, 7, 10, 12, 3);
+    px(ctx, P.metalDark, 8, 2, 11, 9);
+    px(ctx, P.metalLight, 9, 2, 9, 2);
+    px(ctx, frame === 2 ? P.heart : P.glow, 8, 6, 7, 2);
+    const shieldY = frame === 4 ? 24 : 12;
+    const shieldHeight = frame === 4 ? 7 : 16;
+    px(ctx, P.goldDark, 1, shieldY, 6, shieldHeight);
+    px(ctx, P.gold, 2, shieldY + 1, 3, shieldHeight - 2);
+    px(ctx, P.outline, 2, shieldY + 3, 4, 2);
+    px(ctx, frame === 2 ? P.heart : P.glow, 12, 16, 4, 4);
+    if (frame === 4) px(ctx, P.white, 13, 17, 2, 2);
+    if (frame === 2) px(ctx, P.goldLight, 0, 13, 2, 12);
+  }
+  finish(ctx, w, h);
+}
+
+export function drawElectricDroneFrame(ctx: Ctx, frame: number, w: number, h: number): void {
+  if (frame === 3) {
+    px(ctx, P.metalDark, 4, 18, 16, 5);
+    px(ctx, '#7fe3ff', 9, 18, 3, 1);
+  } else {
+    px(ctx, P.metalDark, 6, 6, 12, 12);
+    px(ctx, P.metalLight, 7, 6, 10, 2);
+    px(ctx, '#2a7a90', 2, 5, 3, 14);
+    px(ctx, '#2a7a90', 19, 5, 3, 14);
+    const color = frame === 2 ? P.heart : frame === 4 ? '#315663' : '#7fe3ff';
+    px(ctx, color, 3, frame === 1 ? 8 : 6, 1, 10);
+    px(ctx, color, 20, frame === 1 ? 6 : 8, 1, 10);
+    px(ctx, color, 8, 10, 8, 5);
+    px(ctx, P.outline, 8, 12, 3, 1);
+    if (frame === 2) px(ctx, P.white, 1, 11, 5, 2);
+  }
+  finish(ctx, w, h);
+}
+
+export function drawTechnicianFrame(ctx: Ctx, frame: number, w: number, h: number): void {
+  if (frame === 3) {
+    px(ctx, '#384846', 4, 26, 16, 6);
+    px(ctx, '#78b29d', 8, 24, 8, 3);
+  } else {
+    const stride = frame === 1 ? 1 : 0;
+    px(ctx, '#384846', 7 + stride, 23, 4, 9);
+    px(ctx, '#384846', 14 - stride, 23, 4, 9);
+    px(ctx, '#52856f', 6, 12, 13, 14);
+    px(ctx, '#a0d4b8', 7, 13, 9, 2);
+    fillEllipse(ctx, 12, 7, 6, 5, '#78b29d');
+    px(ctx, '#78b29d', 5, 6, 3, 2);
+    px(ctx, '#78b29d', 17, 6, 3, 2);
+    px(ctx, P.outline, 7, 6, 8, 2);
+    px(ctx, frame === 2 ? P.heart : '#c86bff', 7, 7, 5, 1);
+    const raised = frame !== 4;
+    px(ctx, '#40395e', 1, raised ? 16 : 24, 8, 5);
+    px(ctx, frame === 2 ? P.white : '#c86bff', 2, raised ? 17 : 25, 4, 2);
+    px(ctx, '#40395e', 18, 14, 3, 10);
+  }
+  finish(ctx, w, h);
+}
+
+export function drawOmegaFrame(ctx: Ctx, frame: number, w: number, h: number): void {
+  if (frame === 3) {
+    px(ctx, P.metalDark, 5, 37, 38, 11);
+    px(ctx, '#94384b', 10, 34, 25, 9);
+    px(ctx, P.glow, 22, 38, 5, 3);
+  } else {
+    const shift = frame === 1 ? 1 : 0;
+    px(ctx, P.metalDark, 11 + shift, 32, 10, 16);
+    px(ctx, P.metalDark, 28 - shift, 32, 10, 16);
+    px(ctx, '#94384b', 8, 15, 33, 22);
+    px(ctx, '#df6771', 10, 15, 29, 3);
+    px(ctx, P.metalDark, 3, 13, 9, 20);
+    px(ctx, P.metalDark, 38, 13, 8, 20);
+    px(ctx, P.gold, 4, 14, 6, 4);
+    px(ctx, P.gold, 39, 14, 5, 4);
+    px(ctx, P.metalDark, 13, 3, 23, 12);
+    px(ctx, P.metalLight, 15, 3, 19, 3);
+    px(ctx, frame === 2 ? P.heart : P.goldLight, 13, 9, 17, 3);
+    px(ctx, P.outline, 17, 20, 17, 13);
+    px(ctx, frame === 4 ? P.glow : P.heart, 21, 22, 9, 9);
+    px(ctx, frame === 4 ? P.white : P.gold, 23, 24, 5, 5);
+    if (frame === 2) px(ctx, P.heart, 0, 23, 7, 4);
+  }
+  finish(ctx, w, h);
+}

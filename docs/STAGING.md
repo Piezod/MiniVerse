@@ -103,7 +103,8 @@ Lista de validación en la URL de staging (móvil y escritorio):
 
 1. Mapa de capítulos: Prólogo y La estación fantasma disponibles desde el inicio; Planeta alienígena en «Proximamente».
 2. Niveles: el prólogo empieza por bosque y conserva su progresión; La estación fantasma permite iniciar Hangar
-  sin completar el prólogo, y sus episodios 2-4 aparecen como «Proximamente». Vuelta a capítulos con `Esc`.
+    sin completar el prólogo; Pasillos, Reactor y OMEGA se abren al completar el anterior. El capítulo 2 sigue
+    como «Proximamente». Vuelta a capítulos con `Esc`. Estos cambios locales no se publican sin autorización.
 3. Tienda: comprar, mejorar, equipar en F/R, pantalla de afinidades.
 4. Armas: Rayo, Lanzallamas y Cañón láser (requiere completar el nivel de hielo).
 5. Táctil: botones de movimiento, salto y armas; mantener y soltar para cargar el láser; dos dedos a la vez.

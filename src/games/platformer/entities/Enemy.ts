@@ -9,6 +9,7 @@ import { type AiState, nextAiState } from '../enemies/ai';
 import { type EnemyDef, isFlying } from '../enemies/EnemyCatalog';
 import { hoverPatrol, leashedChase, lungeVelocity, telegraphOn } from '../enemies/flight';
 import { DEPTH } from '../view/ParallaxBackground';
+import { OmegaController } from '../enemies/OmegaController';
 
 /** What an enemy needs from the level, without depending on the scene class. */
 export interface EnemyHost {
@@ -20,6 +21,9 @@ export interface EnemyHost {
   target(): { x: number; y: number; alive: boolean };
   enemyShoot(enemy: Enemy, vx: number, vy: number, damage: number): void;
   enemyDied(enemy: Enemy): void;
+  bossEngaged?(enemy: Enemy): boolean;
+  bossHazards?(enemy: Enemy, active: boolean): void;
+  clearBossShots?(enemy: Enemy): void;
 }
 
 const HURT_TIME = 0.25;
@@ -34,6 +38,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   declare body: Phaser.Physics.Arcade.Body;
   readonly health: Health;
   readonly status: StatusEffects;
+  readonly omega: OmegaController | null;
   private readonly defense: Defense;
   private readonly sprite: EnemySpriteDef;
   private readonly attackCooldown: Cooldown;
@@ -41,6 +46,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private direction = -1;
   private hurtTime = 0;
   private attackTime = 0;
+  private recoveryTime = 0;
   private stompImmunity = 0;
   private attacked = false;
   /** Seconds of attack warning left (the enemy holds still and flashes). */
@@ -51,6 +57,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private readonly homeX: number;
   private readonly homeY: number;
   private readonly bar: Phaser.GameObjects.Graphics | null;
+  private hurtFlash: Phaser.Time.TimerEvent | null = null;
+  private deathTween: Phaser.Tweens.Tween | null = null;
   private elapsed = 0;
 
   constructor(
@@ -64,11 +72,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, sprite.texture, sprite.anims.move[0]);
     this.sprite = sprite;
     this.health = new Health(def.maxHealth);
+    this.omega = def.id === 'omega-7' ? new OmegaController() : null;
     this.defense = { element: def.element, armor: def.armor, resist: def.resist, formResist: def.formResist, immune: def.immune };
     this.status = new StatusEffects(host.statusCatalog, { element: def.element, immune: def.statusImmune });
     this.attackCooldown = new Cooldown(def.attack?.cooldown ?? 1);
     this.homeX = x;
     this.homeY = y;
+    this.direction = def.facing === 'right' ? 1 : -1;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const { width, height, offsetX, offsetY } = sprite.body;
@@ -76,12 +86,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.body.setSize(width, height).setOffset(offsetX, offsetY);
     this.setCollideWorldBounds(true);
     this.setDepth(DEPTH.enemies);
+    this.setFlipX(this.direction > 0 === sprite.facesLeft);
     if (def.tint) this.setTint(hex(def.tint));
     if (isFlying(def)) this.body.setAllowGravity(false);
     if (def.movement === 'stationary') this.body.setImmovable(true);
     this.bar = def.healthBar ? scene.add.graphics().setDepth(DEPTH.enemies + 1) : null;
+    if (this.omega) this.bar?.setScrollFactor(0);
     this.play(enemyAnimKey(def.sprite, 'move'));
-    this.once(Phaser.GameObjects.Events.DESTROY, () => this.bar?.destroy());
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
+      if (this.omega) {
+        this.host.bossHazards?.(this, false);
+        this.host.clearBossShots?.(this);
+      }
+      this.hurtFlash?.remove(false);
+      this.deathTween?.stop();
+      this.bar?.destroy();
+    });
   }
 
   get isAlive(): boolean {
@@ -92,31 +112,74 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return this.ai;
   }
 
+  get contactActive(): boolean {
+    return this.omega ? this.omega.contactActive : true;
+  }
+
+  suspendOmega(reset = false): void {
+    if (!this.omega || !this.isAlive) return;
+    this.omega.suspend();
+    this.body.stop();
+    this.host.bossHazards?.(this, false);
+    this.host.clearBossShots?.(this);
+    if (reset) {
+      this.health.reset();
+      this.status.clear();
+      this.omega.phase = 1;
+      this.body.reset(this.homeX, this.homeY);
+      this.stompImmunity = 0;
+      this.hurtTime = 0;
+    }
+    this.restoreTint();
+    this.drawHealthBar();
+  }
+
   /**
    * Applies a hit through the shared damage model. Situational modifiers added here: the frontal
    * guard and status vulnerability (Sobrecarga). Status effects of the hit are rolled afterwards.
    */
   applyHit(hit: Hit): HitResult {
     if (!this.isAlive) return { damage: 0, killed: false, immune: false };
+    if (this.omega && !this.omega.vulnerable) return { damage: 0, killed: false, immune: true };
     if (hit.form === 'stomp') {
       if (this.stompImmunity > 0) return { damage: 0, killed: false, immune: false };
       this.stompImmunity = STOMP_IMMUNITY;
     }
     let situational = (hit.situational ?? 1) * this.status.damageTakenMultiplier;
-    if (this.def.guard !== undefined && hit.form !== 'stomp' && hit.form !== 'status' && hit.fromX !== undefined && Math.sign(hit.fromX - this.x) === this.direction) {
+    if (this.def.guard !== undefined && this.recoveryTime <= 0 && hit.form !== 'stomp' && hit.form !== 'status' && hit.fromX !== undefined && Math.sign(hit.fromX - this.x) === this.direction) {
       situational *= this.def.guard;
     }
     const result = this.health.apply({ ...hit, situational }, this.defense, this.host.chart);
     if (result.damage > 0 && hit.form !== 'status') {
       this.hurtTime = HURT_TIME;
+      if ((this.def.attack?.recovery ?? 0) > 0) {
+        this.windup = 0;
+        this.attackTime = 0;
+        this.recoveryTime = this.def.attack!.recovery!;
+        this.attacked = false;
+        this.attackCooldown.trigger();
+      }
       this.setTintFill(0xffffff);
-      this.scene.time.delayedCall(80, () => this.restoreTint());
-      if (hit.fromX !== undefined && this.def.movement !== 'stationary') this.body.setVelocityX(Math.sign(this.x - hit.fromX) * 60);
+      this.hurtFlash?.remove(false);
+      this.hurtFlash = this.scene.time.delayedCall(80, () => {
+        this.hurtFlash = null;
+        this.restoreTint();
+      });
+      if (!this.omega && hit.fromX !== undefined && this.def.movement !== 'stationary') this.body.setVelocityX(Math.sign(this.x - hit.fromX) * 60);
     }
     if (result.killed) this.die();
     else if (!result.immune && hit.effects?.length) {
       for (const id of rollEffects(hit.effects, Math.random)) this.status.apply(id);
       this.restoreTint();
+    }
+    if (this.omega && !result.killed) {
+      const previous = this.omega.state;
+      this.omega.update(0, this.health.fraction, this.host.bossEngaged?.(this) ?? true);
+      if (previous !== this.omega.state) {
+        this.body.stop();
+        this.host.bossHazards?.(this, false);
+        this.host.clearBossShots?.(this);
+      }
     }
     return result;
   }
@@ -138,6 +201,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     if (hadStatus && this.status.ids.length === 0) this.restoreTint();
     const body = this.body;
+    if (this.omega) {
+      this.stompImmunity = Math.max(0, this.stompImmunity - dt);
+      this.updateOmega(dt);
+      return;
+    }
     if (this.status.stunned) {
       body.setVelocityX(0);
       if (isFlying(this.def)) body.setVelocityY(0);
@@ -152,19 +220,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.attackCooldown.update(step);
     this.hurtTime = Math.max(0, this.hurtTime - dt);
     this.attackTime = Math.max(0, this.attackTime - dt);
+    this.recoveryTime = Math.max(0, this.recoveryTime - step);
     this.stompImmunity = Math.max(0, this.stompImmunity - dt);
 
     const target = this.host.target();
     const distance = target.alive ? Phaser.Math.Distance.Between(this.x, this.y - this.displayHeight / 2, target.x, target.y) : Infinity;
     const previous = this.ai;
+    if (previous === 'attack' && this.attackTime <= 0 && this.attacked && (this.def.attack?.recovery ?? 0) > 0) {
+      this.recoveryTime = this.def.attack!.recovery!;
+      this.attacked = false;
+    }
     this.ai = nextAiState(this.def, {
       dead: false,
       hurtTime: this.hurtTime,
       attackTime: this.attackTime,
       distance,
       attackReady: this.attackCooldown.ready,
+      recoveryTime: this.recoveryTime,
+      targetInFront: !this.def.fixedFacing || (target.x - this.x) * this.direction >= 0,
     });
     if (this.ai === 'attack' && previous !== 'attack') {
+      if (!this.def.fixedFacing) this.direction = Math.sign(target.x - this.x) || this.direction;
       const telegraph = this.def.attack?.telegraph ?? 0;
       this.windup = telegraph;
       this.windupClock = 0;
@@ -181,7 +257,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (isFlying(this.def)) body.setVelocityY(0);
         break;
       case 'attack':
-        this.direction = toward;
+        if (!this.def.fixedFacing && !(this.def.attack?.recovery ?? 0)) this.direction = toward;
         if (this.windup > 0) {
           // Warning phase: hold still and flash red so the player can read the attack.
           this.windup = Math.max(0, this.windup - step);
@@ -193,6 +269,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
           this.restoreTint();
         }
         this.performAttack(this.def.movement === 'hover' ? this.attackTarget : target, slow);
+        if (!isFlying(this.def) && this.def.attack?.kind === 'lunge' && (!this.groundAhead() || body.blocked.left || body.blocked.right)) body.setVelocityX(0);
+        break;
+      case 'recover':
+        body.setVelocityX(0);
+        if (isFlying(this.def)) body.setVelocityY(0);
         break;
       case 'chase':
         this.direction = toward;
@@ -223,8 +304,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         break;
     }
     this.setFlipX(this.direction > 0 === this.sprite.facesLeft);
-    const anim = this.ai === 'attack' && this.sprite.anims.attack ? 'attack' : 'move';
+    const anim = this.ai === 'recover' && this.sprite.anims.recover ? 'recover' : this.ai === 'attack' && this.sprite.anims.attack ? 'attack' : 'move';
     this.play(enemyAnimKey(this.def.sprite, anim), true);
+    this.drawHealthBar();
+  }
+
+  private updateOmega(dt: number): void {
+    const omega = this.omega!;
+    const target = this.host.target();
+    const engaged = target.alive && !this.status.stunned && (this.host.bossEngaged?.(this) ?? true);
+    const previous = omega.state;
+    const attack = omega.update(dt, this.health.fraction, engaged);
+    if ((omega.state === 'transition' || omega.state === 'dormant') && previous !== omega.state) this.host.clearBossShots?.(this);
+    this.host.bossHazards?.(this, omega.hazardsActive);
+    this.body.setVelocityX(0);
+    if (omega.state === 'telegraph') {
+      this.direction = Math.sign(target.x - this.x) || this.direction;
+      this.attackTarget = { x: target.x, y: target.y };
+      if (telegraphOn(this.scene.time.now / 1000)) this.setTintFill(0xff4a4a);
+      else this.restoreTint();
+    } else this.restoreTint();
+    if (attack === 'shot' || attack === 'combo') {
+      const speed = omega.phase === 3 ? 110 : omega.phase === 2 ? 96 : 82;
+      const angle = Math.atan2(this.attackTarget.y - (this.y - this.displayHeight / 2), this.attackTarget.x - this.x);
+      this.host.enemyShoot(this, Math.cos(angle) * speed, Math.sin(angle) * speed, this.def.attack?.damage ?? 1);
+    }
+    if (omega.contactActive && this.groundAhead()) {
+      const velocity = this.direction * (omega.phase === 3 ? 118 : 88);
+      const range = this.def.patrolRange ?? 112;
+      const bounded = velocity < 0 ? this.x > this.homeX - range : this.x < this.homeX + range;
+      if (bounded && !(velocity < 0 && this.body.blocked.left) && !(velocity > 0 && this.body.blocked.right)) this.body.setVelocityX(velocity);
+    }
+    this.ai = omega.state === 'attack' || omega.state === 'telegraph' ? 'attack' : omega.state === 'recover' ? 'recover' : 'idle';
+    this.setFlipX(this.direction > 0 === this.sprite.facesLeft);
+    this.play(enemyAnimKey(this.def.sprite, omega.vulnerable ? 'recover' : this.ai === 'attack' ? 'attack' : 'move'), true);
     this.drawHealthBar();
   }
 
@@ -233,6 +346,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (body.blocked.left) this.direction = 1;
     else if (body.blocked.right) this.direction = -1;
     else if (body.blocked.down && !this.groundAhead()) this.direction *= -1;
+    if (this.def.patrolRange !== undefined) {
+      if (this.x >= this.homeX + this.def.patrolRange) this.direction = -1;
+      else if (this.x <= this.homeX - this.def.patrolRange) this.direction = 1;
+    }
     body.setVelocityX(speed * this.direction);
   }
 
@@ -260,12 +377,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       if (!body.blocked.down) return;
       body.setVelocity(this.direction * Math.max(this.def.speed, 40) * slow, -attack.power * Math.sqrt(slow));
     } else if (attack.kind === 'lunge') {
-      // Dash through the player's position; contact damage does the rest.
-      const v = lungeVelocity({ x: this.x, y: this.y }, { x: target.x, y: target.y }, attack.power * slow);
-      body.setVelocity(v.vx, v.vy);
+      if (isFlying(this.def)) {
+        const velocity = lungeVelocity({ x: this.x, y: this.y }, { x: target.x, y: target.y }, attack.power * slow);
+        body.setVelocity(velocity.vx, velocity.vy);
+      } else {
+        body.setVelocityX(this.groundAhead() ? this.direction * attack.power * slow : 0);
+      }
     } else {
       body.setVelocityX(0);
-      const angle = isFlying(this.def) ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.direction > 0 ? 0 : Math.PI;
+      const originY = attack.projectile === 'energy' ? this.y - this.displayHeight / 2 : this.y;
+      const angle = isFlying(this.def) ? Phaser.Math.Angle.Between(this.x, originY, target.x, target.y) : this.direction > 0 ? 0 : Math.PI;
       this.host.enemyShoot(this, Math.cos(angle) * attack.power, Math.sin(angle) * attack.power, attack.damage);
     }
     this.attacked = true;
@@ -273,6 +394,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   private die(): void {
+    this.omega?.defeat();
+    if (this.omega) {
+      this.host.bossHazards?.(this, false);
+      this.host.clearBossShots?.(this);
+    }
     this.ai = 'death';
     this.status.clear();
     if (this.anims.isPaused) this.anims.resume();
@@ -281,17 +407,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.bar?.clear();
     this.play(enemyAnimKey(this.def.sprite, 'death'));
     this.host.enemyDied(this);
-    this.scene.tweens.add({ targets: this, alpha: 0, delay: 350, duration: 350, onComplete: () => this.destroy() });
+    this.deathTween = this.scene.tweens.add({ targets: this, alpha: 0, delay: 350, duration: 350, onComplete: () => this.destroy() });
   }
 
   private drawHealthBar(): void {
     if (!this.bar) return;
     this.bar.clear();
+    if (this.omega?.state === 'dormant') return;
     if (!this.def.boss && this.health.fraction >= 1) return;
-    const width = Math.max(12, Math.round(this.displayWidth * 0.8));
-    const x = Math.round(this.x - width / 2);
-    const y = Math.round(this.y - this.displayHeight - 4);
+    const width = this.omega ? 96 : Math.max(12, Math.round(this.displayWidth * 0.8));
+    const x = this.omega ? 112 : Math.round(this.x - width / 2);
+    const y = this.omega ? 160 : Math.round(this.y - this.displayHeight - 4);
     this.bar.fillStyle(0x141327).fillRect(x - 1, y - 1, width + 2, 4);
     this.bar.fillStyle(this.def.boss ? 0xff7a45 : 0xff5a7a).fillRect(x, y, Math.ceil(width * this.health.fraction), 2);
+    if (this.omega) {
+      this.bar.fillStyle(0xfff8ec).fillRect(x + Math.round(width * 0.7), y - 1, 1, 4);
+      this.bar.fillRect(x + Math.round(width * 0.35), y - 1, 1, 4);
+    }
   }
 }

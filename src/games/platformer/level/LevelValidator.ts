@@ -10,6 +10,7 @@ import { validateStory } from '../story/validate';
 import { GRAVITY, PLAYER_BODY, PLAYER_TUNING } from '../physics';
 import { DEFAULT_ENEMY_LEGEND, LEVEL_CHARS, type LevelData, type ParsedLevel, parseLevel, type TilePoint } from './LevelParser';
 import { TILE_SIZE as T } from './tileset';
+import { validateBossEncounter } from './BossEncounter';
 
 export interface ValidationIssue {
   severity: 'error' | 'warning';
@@ -120,9 +121,12 @@ export function validateLevel(
     if (flyer && isFlying(flyer)) return;
     if (!supportAt(p.col, p.row + 1)) warn(`El enemigo ${label(p)} no tiene suelo debajo y caerá`);
   });
-  const objectCheck = validateObjects(level.objects, { width: parsed.width, height: parsed.height });
+  const storyCheck = validateStory(level.story, { width: parsed.width, height: parsed.height });
+  const bossCheck = validateBossEncounter(level.bossEncounter, parsed, storyCheck.beats, knownEnemies);
+  for (const issue of bossCheck.issues) error(issue);
+  const objectCheck = validateObjects(level.objects, { width: parsed.width, height: parsed.height, externalSignals: bossCheck.encounter ? Object.values(bossCheck.encounter.signals) : [] });
   for (const issue of objectCheck.issues) (issue.severity === 'error' ? error : warn)(`objects[${issue.index}]: ${issue.message}`);
-  for (const issue of validateStory(level.story, { width: parsed.width, height: parsed.height }).issues) error(`story${issue.index >= 0 ? `[${issue.index}]` : ''}: ${issue.message}`);
+  for (const issue of storyCheck.issues) error(`story${issue.index >= 0 ? `[${issue.index}]` : ''}: ${issue.message}`);
   if (issues.some((i) => i.severity === 'error') || !parsed.spawn) return { ok: false, issues, level, parsed };
 
   // The jump simulation sees the terrain plus the cells platforms visit (doors count as open).

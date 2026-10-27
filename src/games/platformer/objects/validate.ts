@@ -189,6 +189,10 @@ export function validateObjects(raw: unknown, size: LevelDimensions): ObjectVali
 
   // References are checked once every id is known.
   const switches = new Set(parsed.filter((p) => p.config.type === 'switch').map((p) => (p.config as SwitchConfig).id));
+  for (const signal of size.externalSignals ?? []) {
+    if (!ID.test(signal) || ids.has(signal)) issues.push({ severity: 'error', index: -1, message: `señal externa inválida o duplicada: ${signal}` });
+    switches.add(signal);
+  }
   const used = new Set<string>();
   const valid: Array<{ index: number; config: LevelObjectConfig }> = [];
   for (const entry of parsed) {

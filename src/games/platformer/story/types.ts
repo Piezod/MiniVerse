@@ -10,7 +10,7 @@ export interface StoryLine {
   duration?: number;
 }
 
-export type StoryTrigger = { type: 'start' } | { type: 'zone'; col: number; row: number; width: number; height: number };
+export type StoryTrigger = { type: 'start' } | { type: 'event' } | { type: 'zone'; col: number; row: number; width: number; height: number };
 
 export interface StoryBeat {
   id: string;

@@ -117,6 +117,58 @@ describe('enemy configuration (enemies.json)', () => {
     const text = bad.issues.map((i) => `${i.id}: ${i.message}`).join('\n');
     for (const pattern of [/a: "sprite"/, /b: "maxHealth"/, /c: "extends"/, /circular/, /f: un jefe/, /g: "movement"/]) expect(text).toMatch(pattern);
   });
+
+  it('validates reusable facing, ground patrol limits and attack recovery', () => {
+    const definition = { sprite: 'spitter', maxHealth: 2, movement: 'stationary', facing: 'right', fixedFacing: true, attack: { kind: 'shoot', telegraph: 0.8, recovery: 0.9 } };
+    const valid = buildEnemyCatalog({ turret: definition }, SPRITES);
+    expect(valid.issues).toEqual([]);
+    expect(valid.enemies.turret).toMatchObject({ facing: 'right', fixedFacing: true, attack: { recovery: 0.9 } });
+    const invalid = buildEnemyCatalog({ turret: { ...definition, facing: 'up', fixedFacing: 'yes', patrolRange: -1, attack: { ...definition.attack, recovery: -1 } } }, SPRITES);
+    expect(invalid.enemies).toEqual({});
+    const messages = invalid.issues.map((issue) => issue.message).join();
+    for (const field of ['facing', 'fixedFacing', 'patrolRange', 'recovery']) expect(messages).toContain(field);
+    expect(enemies.enemies.walker).toMatchObject({ facing: 'left', fixedFacing: false });
+    expect(enemies.enemies.walker.patrolRange).toBeUndefined();
+  });
+
+  it('validates vertical patrol and optional enemy projectile appearance', () => {
+    const definition = { sprite: 'drone', maxHealth: 2, movement: 'hover', patrol: { axis: 'y', range: 16 }, attack: { kind: 'shoot', projectile: 'energy' } };
+    const valid = buildEnemyCatalog({ drone: definition }, SPRITES);
+    expect(valid.issues).toEqual([]);
+    expect(valid.enemies.drone).toMatchObject({ patrol: { axis: 'y' }, attack: { projectile: 'energy' } });
+    const invalid = buildEnemyCatalog({ drone: { ...definition, patrol: { axis: 'z' }, attack: { ...definition.attack, projectile: 'unknown' } } }, SPRITES);
+    expect(invalid.enemies).toEqual({});
+    expect(invalid.issues.map((issue) => issue.message).join()).toMatch(/projectile.*axis/);
+  });
+
+  it('registers a fixed turret and a slow vulnerable guardian without new combat rules', () => {
+    expect(enemies.enemies['auto-turret']).toMatchObject({ movement: 'stationary', speed: 0, fixedFacing: true, facing: 'left', maxHealth: 2, attack: { kind: 'shoot', telegraph: 0.9, power: 76 } });
+    expect(enemies.enemies['auto-turret-right']).toMatchObject({ facing: 'right', sprite: 'turret' });
+    const guardian = enemies.enemies['armored-guardian'];
+    expect(guardian).toMatchObject({ movement: 'patrol', maxHealth: 4, speed: 18, patrolRange: 24, guard: 0.5, attack: { kind: 'lunge', recovery: 1.2 } });
+    const beam = abilities.abilities.beam;
+    for (const id of ['auto-turret', 'armored-guardian']) {
+      const enemy = enemies.enemies[id];
+      const damage = computeDamage({ amount: beam.levels[0].params.damage, form: 'projectile', element: beam.element }, enemy, catalogs.chart);
+      expect(damage).toBeGreaterThan(0);
+      expect(Math.ceil(enemy.maxHealth / damage) * beam.levels[0].energy).toBeLessThanOrEqual(100);
+      expect(enemy.immune).toEqual([]);
+    }
+  });
+
+  it('electric drone and technician remain vulnerable to the initial beam', () => {
+    const drone = enemies.enemies['electric-drone'];
+    expect(drone).toMatchObject({ movement: 'hover', patrol: { axis: 'y', standoff: 72 }, resist: { energy: 0.5 }, attack: { kind: 'shoot', element: 'energy', recovery: 1.25 } });
+    expect(enemies.enemies['nexar-technician']).toMatchObject({ movement: 'patrol', patrolRange: 20, attack: { kind: 'shoot', recovery: 1.3 } });
+    const beam = abilities.abilities.beam;
+    for (const id of ['electric-drone', 'nexar-technician']) {
+      const enemy = enemies.enemies[id];
+      const damage = computeDamage({ amount: beam.levels[0].params.damage, form: 'projectile', element: beam.element }, enemy, catalogs.chart);
+      expect(damage).toBeGreaterThan(0);
+      expect(Math.ceil(enemy.maxHealth / damage) * beam.levels[0].energy).toBeLessThanOrEqual(100);
+      expect(enemy.immune).toEqual([]);
+    }
+  });
 });
 
 describe('enemy AI states', () => {
@@ -140,6 +192,16 @@ describe('enemy AI states', () => {
     expect(nextAiState(spitter, { ...snap, distance: 100 })).toBe('attack');
     expect(nextAiState(spitter, { ...snap, distance: 100, attackReady: false })).toBe('idle');
     expect(nextAiState(spitter, { ...snap, distance: 400 })).toBe('idle');
+  });
+
+  it('respects fixed orientation and recovery without bypassing hurt or death', () => {
+    const turret = enemies.enemies.spitter;
+    const close = { ...snap, distance: 30 };
+    expect(nextAiState(turret, { ...close, targetInFront: false })).toBe('idle');
+    expect(nextAiState(turret, { ...close, targetInFront: true })).toBe('attack');
+    expect(nextAiState(turret, { ...close, recoveryTime: 0.8 })).toBe('recover');
+    expect(nextAiState(turret, { ...close, recoveryTime: 0.8, hurtTime: 0.1 })).toBe('hurt');
+    expect(nextAiState(turret, { ...close, recoveryTime: 0.8, dead: true })).toBe('death');
   });
 });
 

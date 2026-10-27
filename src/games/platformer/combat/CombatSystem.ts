@@ -17,6 +17,8 @@ export interface CombatCallbacks {
   /** Every hit on the player: contact (form 'contact') or enemy projectiles (form 'projectile'). */
   damagePlayer(hit: Hit & { fromX: number }): void;
   enemyKilled(enemy: Enemy): void;
+  bossEngaged?(enemy: Enemy): boolean;
+  bossHazards?(enemy: Enemy, active: boolean): void;
 }
 
 export interface CombatRules {
@@ -86,10 +88,33 @@ export class CombatSystem implements EnemyHost {
     return { x: this.player.x, y: this.player.y, alive: this.player.isAlive };
   }
 
+  bossEngaged(enemy: Enemy): boolean {
+    return this.callbacks.bossEngaged?.(enemy) ?? true;
+  }
+
+  bossHazards(enemy: Enemy, active: boolean): void {
+    this.callbacks.bossHazards?.(enemy, active);
+  }
+
+  clearBossShots(enemy: Enemy): void {
+    if (!this.enemyShots.scene) return;
+    for (const shot of [...this.enemyShots.getChildren()] as Phaser.Physics.Arcade.Sprite[]) {
+      if (shot.getData('owner') === enemy) shot.destroy();
+    }
+  }
+
+  suspendBosses(reset = false): void {
+    if (!this.enemies.scene) return;
+    for (const enemy of this.enemies.getChildren() as Enemy[]) enemy.suspendOmega(reset);
+  }
+
   enemyShoot(enemy: Enemy, vx: number, vy: number, damage: number): void {
-    const shot = this.enemyShots.create(enemy.x + Math.sign(vx) * 6, enemy.y - enemy.displayHeight / 2, TEX.projectiles, PROJECTILE_FRAME.fireball) as Phaser.Physics.Arcade.Sprite;
+    const energy = enemy.def.attack?.projectile === 'energy';
+    const shot = this.enemyShots.create(enemy.x + Math.sign(vx) * 6, enemy.y - enemy.displayHeight / 2, TEX.projectiles, energy ? PROJECTILE_FRAME.beam : PROJECTILE_FRAME.fireball) as Phaser.Physics.Arcade.Sprite;
     shot.setDepth(DEPTH.enemies).setData('damage', damage).setData('element', enemy.def.attack?.element ?? enemy.def.element).setData('startX', shot.x).setData('range', 400);
-    shot.play('platformer.projectile.fireball');
+    shot.setData('owner', enemy);
+    shot.play(energy ? 'platformer.projectile.beam' : 'platformer.projectile.fireball');
+    if (energy) shot.setTint(0x7fe3ff);
     shot.body!.setSize(6, 6);
     shot.setVelocity(vx, vy);
     playSound(this.scene, AUDIO.enemyShoot);
@@ -184,6 +209,7 @@ export class CombatSystem implements EnemyHost {
       return;
     }
     if (this.scene.time.now - this.lastStomp < STOMP_GRACE_MS) return;
+    if (!enemy.contactActive) return;
     if (!this.player.isInvulnerable && enemy.def.contactDamage > 0) {
       this.callbacks.damagePlayer({ amount: enemy.def.contactDamage, form: 'contact', element: enemy.def.element, fromX: enemy.x });
     }

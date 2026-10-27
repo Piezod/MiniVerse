@@ -1,3 +1,3 @@
 {
-  "levels": ["01-forest.json", "02-ruins.json", "03-ice.json", "04-volcano.json", "chapter1/01-hangar.json"]
+  "levels": ["01-forest.json", "02-ruins.json", "03-ice.json", "04-volcano.json", "chapter1/01-hangar.json", "chapter1/02-corridors.json", "chapter1/03-reactor.json", "chapter1/04-omega.json"]
 }

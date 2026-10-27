@@ -11,7 +11,7 @@ export interface EnemySpriteDef {
   /** True when the art faces left. */
   facesLeft: boolean;
   frameRate: number;
-  anims: { move: number[]; attack?: number[]; death: number[] };
+  anims: { move: number[]; attack?: number[]; recover?: number[]; death: number[] };
 }
 
 export const ENEMY_SPRITES: Readonly<Record<string, EnemySpriteDef>> = {
@@ -27,12 +27,17 @@ export const ENEMY_SPRITES: Readonly<Record<string, EnemySpriteDef>> = {
   drone: { texture: TEX.drone, body: { width: 10, height: 8, offsetX: 3, offsetY: 5 }, facesLeft: true, frameRate: 12, anims: { move: [0, 1], attack: [2], death: [3] } },
   sentinel: { texture: TEX.sentinel, body: { width: 16, height: 12, offsetX: 4, offsetY: 5 }, facesLeft: true, frameRate: 6, anims: { move: [0, 1], attack: [2], death: [3] } },
   spitter: { texture: TEX.spitter, body: { width: 10, height: 10, offsetX: 3, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0], attack: [1], death: [2] } },
+  turret: { texture: TEX.turret, body: { width: 18, height: 18, offsetX: 3, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], death: [3] } },
+  guardian: { texture: TEX.guardian, body: { width: 16, height: 26, offsetX: 4, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  'electric-drone': { texture: TEX.electricDrone, body: { width: 12, height: 12, offsetX: 6, offsetY: 6 }, facesLeft: true, frameRate: 6, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  technician: { texture: TEX.technician, body: { width: 12, height: 24, offsetX: 6, offsetY: 8 }, facesLeft: true, frameRate: 5, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  omega: { texture: TEX.omega, body: { width: 32, height: 40, offsetX: 8, offsetY: 8 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
 };
 
-export const enemyAnimKey = (sprite: string, anim: 'move' | 'attack' | 'death'): string => `platformer.enemy.${sprite}.${anim}`;
+export const enemyAnimKey = (sprite: string, anim: 'move' | 'attack' | 'recover' | 'death'): string => `platformer.enemy.${sprite}.${anim}`;
 
 export const ENEMY_ANIMS: readonly AnimationDef[] = Object.entries(ENEMY_SPRITES).flatMap(([id, sprite]) =>
-  (['move', 'attack', 'death'] as const)
+  (['move', 'attack', 'recover', 'death'] as const)
     .filter((name) => sprite.anims[name])
     .map((name) => ({
       key: enemyAnimKey(id, name),

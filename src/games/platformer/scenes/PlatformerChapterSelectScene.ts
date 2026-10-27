@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../../core/config';
 import { exitToMenu } from '../../../core/minigame/MiniGameLauncher';
-import { pixelText } from '../../../core/ui/pixelFont';
+import { pixelText, toPixelText } from '../../../core/ui/pixelFont';
 import { TEX, UI_FRAME } from '../assets/manifest';
 import { hex, PALETTE } from '../assets/palette';
 import { BIOMES } from '../biomes';
@@ -52,7 +52,7 @@ export class PlatformerChapterSelectScene extends Phaser.Scene {
     pixelText(this, GAME_WIDTH - 32, 26, String(getGameData().profile.balance), hex(PALETTE.goldLight)).setOrigin(0, 0.5);
 
     gridCenters(this.cards.length, PER_ROW, CARD_W, CARD_H, GAP, GAME_WIDTH / 2, 98).forEach((c, i) => this.createCard(i, c.x, c.y));
-    this.hint = pixelText(this, GAME_WIDTH / 2, GAME_HEIGHT - 8, '', MUTED).setOrigin(0.5);
+    this.hint = pixelText(this, 8, GAME_HEIGHT - 8, '', MUTED).setMaxWidth(import.meta.env.DEV ? 208 : GAME_WIDTH - 16).setOrigin(0, 0.5);
 
     const keyboard = this.input.keyboard;
     for (const key of ['LEFT', 'RIGHT', 'UP', 'DOWN'] as const) keyboard?.on(`keydown-${key}`, () => this.move(key));
@@ -83,7 +83,12 @@ export class PlatformerChapterSelectScene extends Phaser.Scene {
     this.add.rectangle(x, top + 12, CARD_W - 4, 20, accent).setAlpha(card.selectable ? 0.85 : 0.5);
     pixelText(this, x, top + 12, String(index), card.selectable ? 0xffffff : 0x9a9cc0, 2).setOrigin(0.5);
     pixelText(this, x, top + 26, card.name, dim).setMaxWidth(CARD_W - 8).setCenterAlign().setOrigin(0.5, 0);
-    pixelText(this, x, top + 46, card.description, 0x9a9cc0).setMaxWidth(CARD_W - 10).setCenterAlign().setOrigin(0.5, 0);
+    const description = pixelText(this, x, top + 46, card.description, 0x9a9cc0).setMaxWidth(CARD_W - 10).setCenterAlign().setOrigin(0.5, 0);
+    const words = card.description.split(/\s+/);
+    while (description.height > 18 && words.length > 1) {
+      words.pop();
+      description.setText(toPixelText(`${words.join(' ')}...`));
+    }
     pixelText(this, x, top + CARD_H - 38, card.biome, accent).setOrigin(0.5);
 
     if (card.selectable || card.completed) {
@@ -112,7 +117,7 @@ export class PlatformerChapterSelectScene extends Phaser.Scene {
     this.selected = Phaser.Math.Clamp(index, 0, this.frames.length - 1);
     this.frames.forEach((frame, i) => frame.setFillStyle(i === this.selected ? 0x4a3f8a : 0x2b2552));
     const card = this.cards[this.selected];
-    this.hint.setText(card.selectable ? 'Enter: abrir capitulo   T: tienda' : card.status === 'planned' ? 'Este capitulo llegara pronto' : card.requires.length ? `Completa antes: ${card.requires.join(', ')}` : card.stateLabel);
+    this.hint.setText(toPixelText(card.selectable ? 'Enter: abrir capitulo   T: tienda' : card.status === 'planned' ? 'Este capitulo llegara pronto' : card.requires.length ? `Completa antes: ${card.requires.join(', ')}` : card.stateLabel));
   }
 
   private open(index: number): void {
@@ -138,7 +143,7 @@ export class PlatformerChapterSelectScene extends Phaser.Scene {
       })
       .catch((error: unknown) => {
         console.error(error);
-        this.hint.setText('Error en el escenario de pruebas: mira la consola');
+        this.hint.setText(toPixelText('Error en el escenario de pruebas: mira la consola'));
       });
   }
 }

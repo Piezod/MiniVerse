@@ -9,7 +9,7 @@ import {
   drawUiFrame,
   drawWalkerFrame,
 } from './actors';
-import { drawAbilityIcon, drawBatFrame, drawDroneFrame, drawGolemFrame, drawProjectileFrame, drawSentinelFrame, drawSpitterFrame } from './combatArt';
+import { drawAbilityIcon, drawBatFrame, drawDroneFrame, drawElectricDroneFrame, drawGolemFrame, drawGuardianFrame, drawOmegaFrame, drawProjectileFrame, drawSentinelFrame, drawSpitterFrame, drawTechnicianFrame, drawTurretFrame } from './combatArt';
 
 /**
  * World-independent assets (characters, items, FX, UI, sounds). World assets live in worlds/<id>/.
@@ -49,6 +49,11 @@ export const TEX = {
   spitter: 'platformer.enemy.spitter',
   drone: 'platformer.enemy.drone',
   sentinel: 'platformer.enemy.sentinel',
+  turret: 'platformer.enemy.turret',
+  guardian: 'platformer.enemy.guardian',
+  electricDrone: 'platformer.enemy.electric-drone',
+  technician: 'platformer.enemy.technician',
+  omega: 'platformer.enemy.omega',
   projectiles: 'platformer.projectiles',
   abilityIcons: 'platformer.ability-icons',
 } as const;
@@ -99,6 +104,11 @@ export const PLATFORMER_ASSETS: readonly AssetDef[] = [
   { kind: 'spritesheet', key: TEX.spitter, frameWidth: 16, frameHeight: 16, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawSpitterFrame },
   { kind: 'spritesheet', key: TEX.drone, frameWidth: 16, frameHeight: 16, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawDroneFrame },
   { kind: 'spritesheet', key: TEX.sentinel, frameWidth: 24, frameHeight: 24, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawSentinelFrame },
+  { kind: 'spritesheet', key: TEX.turret, frameWidth: 24, frameHeight: 24, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawTurretFrame },
+  { kind: 'spritesheet', key: TEX.guardian, frameWidth: 24, frameHeight: 32, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawGuardianFrame },
+  { kind: 'spritesheet', key: TEX.electricDrone, frameWidth: 24, frameHeight: 24, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawElectricDroneFrame },
+  { kind: 'spritesheet', key: TEX.technician, frameWidth: 24, frameHeight: 32, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawTechnicianFrame },
+  { kind: 'spritesheet', key: TEX.omega, frameWidth: 48, frameHeight: 48, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawOmegaFrame },
   { kind: 'spritesheet', key: TEX.projectiles, frameWidth: 8, frameHeight: 8, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawProjectileFrame },
   { kind: 'spritesheet', key: TEX.abilityIcons, frameWidth: 8, frameHeight: 8, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawAbilityIcon },
   ...Object.values(AUDIO),

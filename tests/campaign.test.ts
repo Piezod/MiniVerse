@@ -28,12 +28,14 @@ const catalogs = buildCatalogs({
 const BIOME_IDS = Object.keys(BIOMES);
 
 /** Real campaign levels, validated like the game does. */
+let validatedEntries: LevelEntry[] | undefined;
 function realEntries(): LevelEntry[] {
-  return (readJson('levels/levels.json').levels as string[]).map((file, index) => {
+  validatedEntries ??= (readJson('levels/levels.json').levels as string[]).map((file, index) => {
     const validation = validateLevel(readJson(`levels/${file}`), BIOME_IDS, catalogs.enemies.enemies, BIOME_VARIANTS);
     const data = validation.level as LevelData;
     return { index, file, id: data.id, name: data.name, biome: data.biome, data, validation };
   });
+  return validatedEntries.map((entry) => ({ ...entry, data: structuredClone(entry.data) }));
 }
 const realCampaign = (storage = memoryStorage()) => {
   const entries = realEntries();
@@ -67,8 +69,8 @@ describe('campaign.json', () => {
     expect(registry.map((f) => readJson(`levels/${f}`).id)).toEqual(prologue.levels);
   });
 
-  it('publishes only episode 1 of the station; the alien chapter stays planned', () => {
-    expect(chapters[1]).toMatchObject({ status: 'ready', levels: ['c1-1-hangar'], biome: 'station' });
+  it('publishes all four station episodes; the alien chapter stays planned', () => {
+    expect(chapters[1]).toMatchObject({ status: 'ready', levels: ['c1-1-hangar', 'c1-2-corridors', 'c1-3-reactor', 'c1-4-omega'], biome: 'station' });
     expect(chapters[1].episodes).toHaveLength(4);
     expect(chapters[2]).toMatchObject({ status: 'planned', plannedLevels: 4, levels: [], biome: 'alien' });
     expect(chapters[1].unlock).toEqual([]);
@@ -486,9 +488,9 @@ describe('selección y navegación', () => {
     const station = levelCards(campaign, 'station');
     expect(station.map((c) => [c.position, c.id, c.planned, c.unlocked])).toEqual([
       [1, 'c1-1-hangar', false, true],
-      [2, 'c1-2-corridors', true, false],
-      [3, 'c1-3-reactor', true, false],
-      [4, 'c1-4-omega', true, false],
+      [2, 'c1-2-corridors', false, false],
+      [3, 'c1-3-reactor', false, false],
+      [4, 'c1-4-omega', false, false],
     ]);
   });
 

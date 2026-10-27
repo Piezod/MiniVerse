@@ -28,7 +28,7 @@
       "description": "PIEZOD despierta en una estación sin vida. LUMA le guía: los NÉXAR se llevaron a la tripulación",
       "order": 1,
       "biome": "station",
-      "levels": ["c1-1-hangar"],
+      "levels": ["c1-1-hangar", "c1-2-corridors", "c1-3-reactor", "c1-4-omega"],
       "unlock": null,
       "rewards": { "abilities": [] },
       "episodes": [

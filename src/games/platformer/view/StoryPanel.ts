@@ -10,7 +10,7 @@ const PANEL_Y = 22;
 const PANEL_W = GAME_WIDTH - PANEL_X * 2;
 const PANEL_H = 50;
 
-const NAMES: Record<string, string> = { luma: 'LUMA', piezod: 'PIEZOD', transmision: 'TRANSMISION', nexar: 'NEXAR' };
+const NAMES: Record<string, string> = { luma: 'LUMA', piezod: 'PIEZOD', transmision: 'TRANSMISION', nexar: 'NEXAR', 'omega-7': 'OMEGA-7' };
 const COLORS: Record<string, string> = { luma: PALETTE.glow, piezod: PALETTE.gold, transmision: '#ffb347', nexar: '#c86bff' };
 
 /** Dialogue box at the top of the screen, driven by a StoryDirector view. Created hidden. */

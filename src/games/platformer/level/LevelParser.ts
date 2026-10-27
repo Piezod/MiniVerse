@@ -38,6 +38,7 @@ export interface LevelData {
   objects?: unknown;
   /** Dialogue and narrative beats (story/validate.ts). */
   story?: unknown;
+  bossEncounter?: unknown;
 }
 
 export const DEFAULT_ENEMY_LEGEND: Readonly<Record<string, string>> = { E: 'walker' };

@@ -38,8 +38,9 @@ export function validateStory(raw: unknown, size: { width: number; height: numbe
     let trigger: StoryBeat['trigger'] = { type: 'start' };
     const t = entry.trigger;
     if (!isRecord(t)) errors.push('"trigger" es obligatorio: { "type": "start" } o { "type": "zone", col, row, width, height }');
-    else if (t.type === 'start') {
-      starts++;
+    else if (t.type === 'start' || t.type === 'event') {
+      trigger = { type: t.type };
+      if (t.type === 'start') starts++;
       for (const key of Object.keys(t)) if (key !== 'type') errors.push(`trigger "start": campo desconocido "${key}"`);
     } else if (t.type === 'zone') {
       for (const key of Object.keys(t)) if (!ZONE_KEYS.includes(key)) errors.push(`trigger "zone": campo desconocido "${key}"`);
@@ -54,7 +55,7 @@ export function validateStory(raw: unknown, size: { width: number; height: numbe
       const zone = { type: 'zone' as const, col: int('col', 0, size.width - 1), row: int('row', 0, size.height - 1), width: int('width', 1, 80), height: int('height', 1, 60) };
       if (zone.col + zone.width > size.width || zone.row + zone.height > size.height) errors.push('trigger "zone": la zona se sale del nivel');
       trigger = zone;
-    } else errors.push('trigger "type" debe ser "start" o "zone"');
+    } else errors.push('trigger "type" debe ser "start", "event" o "zone"');
 
     const lines: StoryLine[] = [];
     if (!Array.isArray(entry.lines) || entry.lines.length === 0 || entry.lines.length > MAX_LINES) errors.push(`"lines" debe tener entre 1 y ${MAX_LINES} líneas`);

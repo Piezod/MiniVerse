@@ -114,17 +114,17 @@ inexistentes. `getBiome(id, variant)` resuelve el tema y `BIOME_THEMES` lista ba
 ### 0.6b Capítulo 1: La estación fantasma (Hangar disponible desde el inicio)
 
 Campaña: **MiniVerse — La última señal** (`campaign` en `campaign.json`: título, sinopsis, protagonista y reparto:
-PIEZOD, LUMA, NÉXAR, OMEGA-7). El capítulo `station` publica solo `c1-1-hangar`;
-los episodios 2, 3 y 4 siguen como metadatos, sin archivos ni enemigos de jefe implementados.
+PIEZOD, LUMA, NÉXAR, OMEGA-7). El capítulo `station` publica los cuatro episodios:
+Hangar, Pasillos, Reactor y Protocolo OMEGA, con su jefe OMEGA-7.
 Prólogo y capítulo 1 están disponibles desde una partida nueva, sin requisitos entre ellos y con el mismo
 acceso en local, staging y producción. El capítulo declara cuatro **episodios**:
 
 | Episodio (id del futuro nivel) | Título | Variante | Notas |
 | --- | --- | --- | --- |
 | `c1-1-hangar` | Despertar en el Hangar | `hangar` | implementado; disponible desde el selector normal |
-| `c1-2-corridors` | Pasillos de seguridad | `corridors` | comparte texturas; partículas e iluminación propias |
-| `c1-3-reactor` | El reactor inestable | `reactor` | paleta verde/ámbar, texturas propias |
-| `c1-4-omega` | Protocolo OMEGA | `boss` | jefe `omega-7` (aún no existe en `enemies.json`) |
+| `c1-2-corridors` | Pasillos de seguridad | `corridors` | implementado; se abre al completar Hangar |
+| `c1-3-reactor` | El reactor inestable | `reactor` | implementado; se abre al completar Pasillos |
+| `c1-4-omega` | Protocolo OMEGA | `boss` | implementado; requiere completar Reactor; jefe `omega-7` |
 
 - `episodes` es metadato: `id` (el id que tendrá el nivel), `title`, `summary`, `variant` y `boss` opcionales. En un
   capítulo `planned` no se carga ningún nivel; `plannedLevels` debe coincidir con el número de episodios.
@@ -132,7 +132,7 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
   niveles registrados, y, al pasar a jugable, que `levels` sea un prefijo de `episodes` en orden, que el nivel use la
   variante declarada y que el jefe sea un enemigo con `boss: true`.
 - `CampaignManager.episodesOf(capítulo)` devuelve cada episodio con su nivel, si es jugable y si está completado
-  (hoy: solo Hangar). `CampaignManager.meta` expone los metadatos de campaña.
+  (Hangar disponible; después Pasillos, Reactor y OMEGA en orden). `CampaignManager.meta` expone los metadatos de campaña.
 - El bioma `station` y sus cuatro variantes están en `biomes/definitions/station.ts` (arte procedural provisional;
   carpetas `public/assets/platformer/biomes/station/*` listas para PNG vía `files`).
 
@@ -160,16 +160,119 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
   no se conceden compras o recompensas y no se modifican partidas guardadas para abrir el capítulo 1.
 - El equipamiento inicial se conserva sin compras; el nivel es alcanzable sin habilidades y los drones
   pueden vencerse saltando sobre ellos. Las armas ya adquiridas siguen funcionando.
-- Completar Hangar persiste sus estrellas, pero no completa el capítulo (1/4), no abre episodios ausentes ni el capítulo 2.
+- Completar Hangar persiste sus estrellas y abre Pasillos, pero no completa el capítulo (1/4) ni abre el capítulo 2.
 - `tests/chapter1.test.ts` cubre contenido real, narrativa, drones, acceso uniforme, progresión y compatibilidad del prólogo.
 
-La implementación de más episodios queda fuera de esta fase.
+### 0.6c Episodio 2: Pasillos de seguridad
+
+- Archivo `levels/chapter1/02-corridors.json`; bioma `station`, variante `corridors`, 1120 x 28 tiles.
+- Siete secciones: entrada y registro, defensa alterada, dos circuitos de puertas, defensa mixta,
+  ascenso de mantenimiento, bloqueo combinado y sala de registros.
+- 51 estrellas opcionales, diez enemigos y un checkpoint antes del ascenso. Entrada, checkpoint y zona del
+  registro final fuera de los radios de persecución y ataque.
+- Progresión de combate: torreta aislada; guardián aislado; torreta con explorador; guardian con láseres;
+  puesto mixto final con torreta orientada a la derecha y guardián. El ascenso conserva sus dos exploradores.
+- `auto-turret`: fija, 2 de vida, aviso de 0.9 s, disparo horizontal a 76 px/s, cadencia de 2.8 s y recuperación
+  de 0.65 s. Solo detecta al frente. `auto-turret-right` hereda sus datos y cambia `facing` a `right`.
+- `armored-guardian`: robot terrestre de 4 de vida, velocidad 18 px/s y patrulla limitada a 24 px del origen.
+  Embiste a 88 px/s tras un aviso de 0.85 s, sin seguir al jugador durante la embestida. Después permanece
+  inmóvil 1.2 s, sin protección frontal. El escudo normal reduce a la mitad los golpes frontales, no los anula.
+- Configuración reutilizable en `enemies.json`: `facing`, `fixedFacing`, `patrolRange`, `attack.telegraph`,
+  `attack.cooldown` y `attack.recovery`; vida, daño de contacto, velocidad, elemento y resistencias usan los campos
+  existentes. No hay un segundo sistema de IA. Los nuevos sprites son placeholders sustituibles por spritesheets.
+- El rayo de nivel 1 puede derrotar a ambos enemigos; saltar, flanquear o aprovechar la recuperación evita
+  depender de compras. Dañar al enemigo durante el aviso interrumpe el ataque y reinicia una pausa segura.
+- `tests/enemies.test.ts` ejecuta la entidad Enemy real con un entorno Phaser mínimo: aviso previo al disparo,
+  orientación, cadencia, embestida terrestre, escudo, interrupción, muerte única y limpieza de barra, flash y tween.
+- Tres plataformas móviles, cuatro láseres con aviso, cinco interruptores permanentes y cinco puertas.
+  Los circuitos finales abren sus puertas y desactivan láseres; no hay ventanas temporizadas que invaliden un respawn.
+- Tres registros cuentan la reprogramación NÉXAR, la captura y el transporte humano fuera de la estación.
+  Solo el registro final pausa la acción; la salida usa el portal y la victoria existentes.
+- El recorrido no exige armas compradas ni habilidades. El validador comprueba meta, estrellas y checkpoint;
+  los tests simulan también puertas cerradas para comprobar el orden de acceso a las palancas.
+- Acceso normal: completar Hangar -> La estación fantasma -> Pasillos de seguridad. Las partidas anteriores
+  con Hangar completado lo desbloquean al cargar, sin migraciones ni recompensas artificiales.
+- Completar Pasillos guarda su resultado (2/4) y desbloquea el Reactor. OMEGA se desbloquea al completar el Reactor.
+- Objetivo orientativo de primera exploración: 8-12 minutos. La duración y el ajuste fino de dificultad
+  requieren una partida completa cronometrada; no se deducen de la validación automática.
+
+### 0.6d Episodio 3: El reactor inestable
+
+- Archivo `levels/chapter1/03-reactor.json`; bioma `station`, variante `reactor`, 1600 x 28 tiles.
+- Ocho secciones: acceso, suelos electrificados, transporte sobre conductores, drones, regulación,
+  defensas combinadas, sobrecarga y escape al núcleo de seguridad.
+- 64 estrellas opcionales y dieciséis enemigos, distribuidos expresamente. Dron eléctrico y técnico NÉXAR
+  se presentan por separado en dos claros, antes de combinarlos con conductores, plataformas y defensas existentes.
+  Acceso, regulación, sobrecarga y terminal conservan zonas sin enemigos para leer y recuperar el ritmo.
+- Trece suelos eléctricos, cinco láseres, seis plataformas móviles, cuatro controles permanentes y cinco puertas.
+  Todos los peligros anuncian la descarga, mantienen ventanas de apagado y tienen tramos de espera entre ellos.
+- Cuatro checkpoints: al final del acceso, antes de la regulación, antes de la sobrecarga y antes del escape, fuera del alcance
+  de los enemigos y lejos de las franjas peligrosas.
+- Tres reguladores abren las puertas en orden y anulan peligros concretos. El control elevado de aislamiento
+  detiene la extracción, abre la salida y apaga la sobrecarga. Las defensas del escape usan reserva y conservan sus
+  ciclos con aviso y apagado. No se puede llegar al
+  anuncio de estabilización ni al final sin activar los cuatro controles.
+- `electric-drone`: volador de 2 de vida, velocidad 26, patrulla vertical corta (`patrol.axis: y`), distancia
+  preferida 72 px y resistencia a energía de 0.5. Dispara energía a 80 px/s tras 1 s de aviso, con 1.25 s de recuperación inmóvil.
+- `nexar-technician`: alienígena terrestre de 2 de vida, velocidad 14 y patrulla limitada a 20 px. Prepara durante
+  1.15 s un único disparo de energía a 84 px/s y queda expuesto 1.3 s; no invoca ni crea enemigos adicionales.
+- Ambos reutilizan Enemy, los proyectiles y el daño elemental existentes. `attack.projectile: energy` cambia
+  solo la apariencia del disparo enemigo; el rayo básico puede vencer a ambos sin plasma, criogenia ni mejoras.
+- El último tramo combina un transporte sobre electricidad, dron y técnico, un ascensor obligatorio sobre una
+  compuerta dañada y un segundo encuentro de dron y guardián. Hay refugios entre grupos y una zona final fuera
+  del alcance de enemigos y proyectiles antes del anuncio OMEGA.
+- Sin cuenta atrás de escape: se conservan las señales al reaparecer en el checkpoint; al reiniciar el nivel
+  se restablecen puertas, señales y ciclos mediante el sistema de objetos existente.
+- LUMA relaciona los registros de Pasillos con una máquina NÉXAR alimentada por el reactor para transportar
+  prisioneros. Al terminar anuncia: «Protocolo OMEGA activado. Unidad de defensa OMEGA-7 en funcionamiento».
+- Acceso normal: completar Pasillos -> La estación fantasma -> El reactor inestable. Los guardados anteriores
+  con Pasillos completado lo desbloquean al cargar, sin recompensas o progreso artificiales.
+- Completar Reactor registra 3/4 y desbloquea Protocolo OMEGA, sin completar todavía el capítulo.
+- Objetivo orientativo de primera exploración: 10-15 minutos. La duración real y el balance requieren una
+  partida completa cronometrada; los tests no certifican el tiempo de juego.
+
+### 0.6e Episodio 4: Protocolo OMEGA
+
+- Archivo `levels/chapter1/04-omega.json`; bioma `station`, variante `boss`, 740 x 28 tiles, 20 estrellas.
+- Aproximación con defensas existentes, dos controles de acceso, checkpoint antes de arena y salida segura.
+  La arena mide 20 tiles de ancho; la cámara se fija para mostrarla entera durante el combate.
+- `omega-7` está registrado con `boss: true`, sprite provisional propio de 48 x 48, barra fija y 20 de vida.
+  Usa Enemy, Health, afinidades y proyectiles compartidos. Solo recibe daño con el núcleo abierto en recuperación.
+- Máquina recuperada `OmegaController`: fase 1 por encima del 70%, fase 2 entre 70% y 35%, fase 3 desde el 35%.
+  Patrones: disparo y embestida; disparo/láseres/embestida; combinaciones más rápidas. Todos tienen aviso y pausa
+  de recuperación. Los golpes de transición cancelan los proyectiles y apagan las señales del escenario.
+- `bossEncounter` declara arena, enemigo, señales externas e identificadores de diálogos. Las puertas, dos láseres
+  y dos conductores laterales son objetos existentes, no una implementación paralela de peligros.
+- Introducción, transiciones, muerte del jugador, derrota y destrucción de escena retiran los peligros del jefe.
+  Morir durante la arena reinicia salud y fase en el checkpoint; reiniciar el nivel recrea todos los recursos.
+- La introducción reconoce la armadura y revela que el despertar no fue accidental. La derrota recupera las
+  coordenadas del planeta y transmite: «PIEZOD... tú ya estuviste allí. Ellos te estaban esperando».
+- El portal espera al jefe derrotado y al final del diálogo. Registra la victoria y muestra «Capítulo completado»;
+  el capítulo 2 sigue como Próximamente y no se conceden armas ni recompensas artificiales.
+- El rayo de nivel 1 y la regeneración normal bastan en la simulación de combate. También se conserva el salto
+  sobre el jefe para no imponer compras a un perfil nuevo. No se modifican las armas, F/R ni la tienda.
+- Objetivo orientativo de primera exploración: 8-12 minutos. La duración real exige un recorrido cronometrado.
+
+### 0.6f Integración y revisión del capítulo 1
+
+- Cuatro JSON registrados, variantes station validadas, desbloqueo secuencial y progreso v2 conservado.
+- Prólogo y capítulo 1 disponibles desde una partida nueva, sin completar niveles automáticamente.
+- Objetivos de dificultad: Hangar 2/10, Pasillos 4/10, Reactor 7/10, OMEGA 9/10; no son métricas verificadas.
+- Se prueban referencias de objetos, saltos sin habilidades, checkpoints seguros y controles antes de sus puertas.
+- Las pruebas distinguen simulación automática, pruebas de humo en Phaser y recorridos humanos completos.
+  El balance fino y las duraciones siguen pendientes de partidas completas, especialmente en móvil físico.
+- Selectores: descripciones de capítulo limitadas a dos líneas, texto dinámico normalizado para la fuente pixelada
+  y título de niveles acotado para no solaparse con navegación o tienda.
+- Corregido el cierre de escena cuando Phaser ya ha destruido los grupos de enemigos o proyectiles;
+  el reinicio del encuentro no depende del orden de destrucción de esos recursos.
+
+El capítulo 2 no se implementa en esta fase.
 
 ### 0.7 Pendiente de esta fase
 
 - Aplicar las recompensas de capítulo al perfil (hoy solo se declaran y se consultan con `earnedRewards()`).
-- Biomas `station` y `alien`, sus niveles, enemigos y jefes (capítulos 1 y 2).
-- Objetos de nivel, comportamientos de enemigo modulares y jefes por fases (Partes C y D).
+- Capítulo 2: bioma `alien`, niveles, enemigos y jefe. Sigue sin implementarse ni ser jugable.
+- Validación humana de balance y duración del capítulo 1, y sustitución del arte procedural provisional.
 
 ---
 

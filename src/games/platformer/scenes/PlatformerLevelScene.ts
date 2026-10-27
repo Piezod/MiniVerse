@@ -29,6 +29,7 @@ import type { LevelSceneData } from '../level/levelFlow';
 import { getCampaign, getLevelManager } from '../level/levelLoader';
 import { parseLevel, type TilePoint } from '../level/LevelParser';
 import { getSandboxLevel } from '../level/sandboxLevels';
+import { validateBossEncounter, type BossEncounter } from '../level/BossEncounter';
 import { createDefaultRegistry } from '../objects/builtin';
 import { StoryDirector } from '../story/StoryDirector';
 import { validateStory } from '../story/validate';
@@ -86,6 +87,9 @@ export class PlatformerLevelScene extends Phaser.Scene {
   /** True while a blocking story beat froze the physics. */
   private storyFroze = false;
   private touchDevice = false;
+  private encounter: BossEncounter | null = null;
+  private encounterStarted = false;
+  private encounterDefeated = false;
 
   constructor() {
     super({ key: PlatformerLevelScene.KEY, physics: { arcade: { gravity: { x: 0, y: GRAVITY } } } });
@@ -114,6 +118,10 @@ export class PlatformerLevelScene extends Phaser.Scene {
     const levelData = sandboxData ?? manager.getData(data.levelId);
     const entry = manager.get(data.levelId);
     const level = parseLevel(levelData);
+    const storyCheck = validateStory(levelData.story, { width: level.width, height: level.height });
+    this.encounter = validateBossEncounter(levelData.bossEncounter, level, storyCheck.beats).encounter;
+    this.encounterStarted = false;
+    this.encounterDefeated = false;
     const biome = getBiome(level.biome, level.variant);
     // Biome textures are generated on first use so unused biomes cost nothing.
     createMissingPlaceholders(this, biome.assets);
@@ -185,7 +193,14 @@ export class PlatformerLevelScene extends Phaser.Scene {
       layer,
       this.player,
       this.fx,
-      { damagePlayer: (hit) => this.damagePlayer(hit), enemyKilled: (enemy) => this.onEnemyKilled(enemy) },
+      {
+        damagePlayer: (hit) => this.damagePlayer(hit),
+        enemyKilled: (enemy) => this.onEnemyKilled(enemy),
+        bossEngaged: () => !this.encounter || (this.encounterStarted && !this.encounterDefeated && !this.story?.pendingBlocking && this.player.isAlive && this.inBossArena()),
+        bossHazards: (_enemy, active) => {
+          if (this.encounter) this.objects?.signals.set(this.encounter.signals.hazards, active && this.player.isAlive && !this.story?.pendingBlocking);
+        },
+      },
       { chart, statusCatalog: statuses.effects },
     );
     for (const p of level.enemies) {
@@ -195,8 +210,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.abilities = new AbilitySystem({ scene: this, player: this.player, input: this.controls, combat: this.combat, fx: this.fx }, profile.loadout());
     // Invalid object configuration throws here with every problem listed, instead of failing silently.
     this.objects = new LevelObjectManager(createDefaultRegistry(), { scene: this, player: this.player, fx: this.fx, damagePlayer: (hit) => this.damagePlayer(hit) });
-    this.objects.load(levelData.objects, { width: level.width, height: level.height });
-    this.story = new StoryDirector(validateStory(levelData.story, { width: level.width, height: level.height }).beats, touch);
+    this.objects.load(levelData.objects, { width: level.width, height: level.height, externalSignals: this.encounter ? Object.values(this.encounter.signals) : [] });
+    this.story = new StoryDirector(storyCheck.beats, touch);
     this.storyPanel = new StoryPanel(this);
     this.storyFroze = false;
     this.physics.add.overlap(this.player, stars, this.onCollectStar, playerAlive, this);
@@ -234,6 +249,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.RESUME, resumeObjects);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       cancelCharge();
+      this.combat.suspendBosses();
+      if (this.encounter) this.objects?.signals.set(this.encounter.signals.hazards, false);
       this.events.off(Phaser.Scenes.Events.PAUSE, pauseObjects);
       this.events.off(Phaser.Scenes.Events.RESUME, resumeObjects);
       this.objects?.destroy();
@@ -274,11 +291,18 @@ export class PlatformerLevelScene extends Phaser.Scene {
     const story = this.story;
     if (!story) return;
     story.update(dt);
+    if (this.encounter && !this.encounterStarted && !this.encounterDefeated && this.player.isAlive && this.inBossArena()) {
+      this.encounterStarted = true;
+      this.objects?.signals.set(this.encounter.signals.engaged, true);
+      this.frameBossArena(true);
+      story.trigger(this.encounter.intro);
+    }
     this.storyPanel?.render(story.view, this.touchDevice, dt, this.player.visual.y - this.cameras.main.scrollY);
     const blocking = story.blocking;
     if (blocking !== this.storyFroze) {
       this.storyFroze = blocking;
       if (blocking) {
+        this.combat.suspendBosses();
         this.physics.pause();
         this.player.body.setVelocity(0, 0);
         this.abilities.cancelAll();
@@ -287,6 +311,24 @@ export class PlatformerLevelScene extends Phaser.Scene {
     if (!blocking && this.player.isAlive) {
       const b = this.player.body;
       story.checkZones({ x: b.x, y: b.y, width: b.width, height: b.height });
+    }
+  }
+
+  private inBossArena(): boolean {
+    const arena = this.encounter?.arena;
+    return !!arena && this.player.x >= arena.col * TILE_SIZE && this.player.x < (arena.col + arena.width) * TILE_SIZE && this.player.y >= arena.row * TILE_SIZE && this.player.y < (arena.row + arena.height) * TILE_SIZE;
+  }
+
+  private frameBossArena(locked: boolean): void {
+    if (!this.encounter) return;
+    const camera = this.cameras.main;
+    if (locked) {
+      camera.stopFollow();
+      camera.setBounds(this.encounter.arena.col * TILE_SIZE, 0, this.encounter.arena.width * TILE_SIZE, this.worldHeight);
+      camera.setScroll(this.encounter.arena.col * TILE_SIZE, this.worldHeight - GAME_HEIGHT);
+    } else {
+      camera.setBounds(0, 0, this.physics.world.bounds.width, this.worldHeight);
+      camera.startFollow(this.player.visual, true, CAMERA_LERP_X, CAMERA_LERP_Y, 0, CAMERA_HEIGHT_OFFSET);
     }
   }
 
@@ -359,6 +401,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
    */
   private damagePlayer(hit: Hit & { fromX: number }): void {
     if (!this.player.isAlive || this.player.isInvulnerable || this.finished) return;
+    if (this.encounterStarted && (this.story?.pendingBlocking || (this.combat.enemies.getChildren() as Enemy[]).some((enemy) => enemy.omega?.state === 'transition'))) return;
     const fromX = hit.fromX;
     const result = this.health.apply(hit);
     this.bus.emit(LevelEvent.Health, this.health.current, this.health.max);
@@ -373,6 +416,14 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
   private onEnemyKilled(enemy: Enemy): void {
     this.abilities.energy.restore(enemy.def.reward.energy);
+    if (this.encounter && enemy.def.id === this.encounter.enemy) {
+      this.encounterDefeated = true;
+      this.objects?.signals.set(this.encounter.signals.hazards, false);
+      this.objects?.signals.set(this.encounter.signals.engaged, false);
+      this.objects?.signals.set(this.encounter.signals.defeated, true);
+      this.frameBossArena(false);
+      this.story?.trigger(this.encounter.victory);
+    }
     if (enemy.def.boss && this.combat.bossesAlive === 0) this.floatText(enemy.x, enemy.y - 40, 'Portal abierto!');
   }
 
@@ -400,6 +451,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
   private onReachPortal(_player: OverlapTarget, portal: OverlapTarget): void {
     if (this.finished || this.story?.pendingBlocking) return;
+    if (this.encounter && !this.encounterDefeated) return;
     const sprite = portal as Phaser.Physics.Arcade.Sprite;
     if (this.combat.bossesAlive > 0) {
       if (this.time.now - this.gateMessageAt > 1500) {
@@ -422,6 +474,13 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
   private killPlayer(): void {
     if (!this.player.isAlive) return;
+    if (this.encounter && !this.encounterDefeated) {
+      this.encounterStarted = false;
+      this.frameBossArena(false);
+      this.objects?.signals.set(this.encounter.signals.engaged, false);
+      this.objects?.signals.set(this.encounter.signals.hazards, false);
+      this.combat.suspendBosses();
+    }
     this.abilities.cancelAll();
     playSound(this, AUDIO.hurt);
     this.fx.playerDeath(this.player.visual.x, this.player.visual.y - 12);
@@ -430,6 +489,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
       this.lives--;
       this.bus.emit(LevelEvent.Lives, this.lives);
       if (this.lives > 0) {
+        if (this.encounter && !this.encounterDefeated) this.combat.suspendBosses(true);
         this.health.reset();
         this.bus.emit(LevelEvent.Health, this.health.current, this.health.max);
         this.player.respawnAt(this.respawn.x, this.respawn.y);

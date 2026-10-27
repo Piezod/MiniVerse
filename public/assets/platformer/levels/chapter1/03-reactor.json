@@ -1,0 +1,212 @@
+{
+  "id": "c1-3-reactor",
+  "name": "El reactor inestable",
+  "biome": "station",
+  "variant": "reactor",
+  "height": 28,
+  "sections": [
+    {
+      "name": "Acceso al reactor",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX", "XXX",
+        "................................................................................................S",
+        "...............................S...........................................................===========................................................S",
+        "...........................==========............................................................................................................============",
+        "............................................................................XXXXXX.....====",
+        ".......................====..................XXXXX..........................XXXXXX...........................................................====",
+        "......P.........S.....1..................====XXXXX......S.............S.====XXXXXX.====..................................S............................................................S........K",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Suelos electrificados",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX", "XXX", "",
+        "................................................................................S...........................................S",
+        ".........................E..................................................=========..................................===========",
+        "",
+        "........................................................................====.......................................====",
+        "............2...........S.......................................S.............J........................S..........................................S..........................S................S",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Transporte sobre conductores",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX", "XXX", "",
+        "..............................................................E...........S..........................................S..........................................................S",
+        ".......................................................................======.....................................=======.................................................=============",
+        "",
+        "...................................................................====.......................................====....................................................====",
+        "............3...........S................S.....................................................................S........J.....................................S.................................S",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Combate de drones",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "", "", "",
+        "................................S..E..............................................................S.........D",
+        "............................=========.............XXXXX.......................................=========.......................XXXXXX",
+        "..........4........S..........................====XXXXX......S........N.............S..................................S..====XXXXXX.............J...................S..............S.........K",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Sala de regulacion",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX", "XXX", "",
+        "................................S...............................................................................................................................S",
+        "..............................============..............................................................................................................============",
+        "",
+        "..........................====...........................................XXXXX......................................................................====",
+        "..........5.........S.........................................S......====XXXXX.....S......................S............................................S......................................S",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Defensas del reactor",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX", "XXX", "", "", "",
+        "...................................................................S............E.......................................................................S",
+        "................................................................=======.........................XXXXXX..............................................========",
+        ".........6........S...........T...........G...............S...............................S.====XXXXXX......S.....................J............S.......................................S......K",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Sobrecarga del reactor",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX", "XXX", "",
+        "........................................................................................................................................S",
+        "....................................................................................................................................=============",
+        "",
+        "................................................................................................................................====",
+        "..........7.............S.....................................S....................S.............................S.....................................S.......................S..............K.S",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    },
+    {
+      "name": "Escape al nucleo de seguridad",
+      "rows": [
+        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "XXX...................................................................................................................................................................................................XX",
+        "XXX...................................................................................................................................................................................................XX",
+        ".....................................................................................S................................................................................................................XX",
+        ".......................................................E..........................XXXXXXX......................S........E.............................................................................XX",
+        "..................................................................................XXXXXXX.................===========.................................................................................XX",
+        "..................................................................................XXXXXXX.............................................................................................................XX",
+        "..................................................................................XXXXXXX...XXXXX.....====............................................................................................XX",
+        "............8............S...................................S..J.................XXXXXXX===XXXXX...........G.......................S..............S..........9...............S.............O....S....XX",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################",
+        "########################################################################################################################################################################################################"
+      ]
+    }
+  ],
+  "signs": {
+    "1": { "keyboard": "ACCESO REACTOR", "touch": "ACCESO REACTOR" },
+    "2": { "keyboard": "ESPERA LA DESCARGA", "touch": "ESPERA LA DESCARGA" },
+    "3": { "keyboard": "TRANSPORTE TECNICO", "touch": "TRANSPORTE TECNICO" },
+    "4": { "keyboard": "DEFENSAS ACTIVAS", "touch": "DEFENSAS ACTIVAS" },
+    "5": { "keyboard": "TRES REGULADORES", "touch": "TRES REGULADORES" },
+    "6": { "keyboard": "DEFENSA DEL NUCLEO", "touch": "DEFENSA DEL NUCLEO" },
+    "7": { "keyboard": "CORTAR EXTRACCION", "touch": "CORTAR EXTRACCION" },
+    "8": { "keyboard": "RUTA DE ESCAPE", "touch": "RUTA DE ESCAPE" },
+    "9": { "keyboard": "NUCLEO DE SEGURIDAD", "touch": "NUCLEO DE SEGURIDAD" }
+  },
+  "enemies": { "D": "drone-scout", "N": "drone-sentinel", "T": "auto-turret", "R": "auto-turret-right", "G": "armored-guardian", "E": "electric-drone", "J": "nexar-technician" },
+  "objects": [
+    { "type": "electricFloor", "id": "training-floor-a", "col": 244, "row": 24, "width": 5, "on": 1.4, "off": 1.6, "warning": 0.9 },
+    { "type": "electricFloor", "id": "training-floor-b", "col": 292, "row": 24, "width": 6, "on": 1.6, "off": 1.4, "warning": 0.9, "offset": 1.5 },
+    { "type": "electricFloor", "id": "training-floor-c", "col": 336, "row": 24, "width": 5, "on": 1.8, "off": 1.3, "warning": 1 },
+    { "type": "electricFloor", "id": "training-floor-d", "col": 370, "row": 24, "width": 6, "on": 1.6, "off": 1.4, "warning": 1, "offset": 1.8 },
+    { "type": "electricFloor", "id": "transport-floor-a", "col": 448, "row": 24, "width": 10, "on": 2.2, "off": 1.5, "warning": 1 },
+    { "type": "electricFloor", "id": "transport-floor-b", "col": 491, "row": 24, "width": 12, "on": 2.4, "off": 1.4, "warning": 1, "offset": 2 },
+    { "type": "electricFloor", "id": "transport-floor-c", "col": 535, "row": 24, "width": 11, "on": 2, "off": 1.5, "warning": 1, "offset": 0.8 },
+    { "type": "movingPlatform", "id": "transport-a", "col": 446, "row": 22, "width": 4, "axis": "x", "travel": 14, "speed": 40, "wait": 0.8 },
+    { "type": "movingPlatform", "id": "transport-b", "col": 487, "row": 22, "width": 4, "axis": "x", "travel": 17, "speed": 38, "wait": 0.8, "offset": 0.4 },
+    { "type": "movingPlatform", "id": "transport-c", "col": 531, "row": 22, "width": 4, "axis": "x", "travel": 18, "speed": 42, "wait": 0.8 },
+    { "type": "switch", "id": "regulator-a", "col": 836, "row": 20 },
+    { "type": "electricFloor", "id": "regulator-floor-a", "col": 852, "row": 24, "width": 7, "on": 1.8, "off": 1.4, "warning": 1, "disabledBy": "regulator-a" },
+    { "type": "door", "id": "regulator-door-a", "col": 862, "row": 17, "height": 8, "opensWith": "regulator-a" },
+    { "type": "switch", "id": "regulator-b", "col": 886, "row": 24 },
+    { "type": "laser", "id": "regulator-laser", "col": 906, "row": 17, "orientation": "vertical", "length": 7, "on": 1.7, "off": 1.3, "warning": 0.9, "disabledBy": "regulator-b" },
+    { "type": "door", "id": "regulator-door-b", "col": 922, "row": 17, "height": 8, "opensWith": ["regulator-a", "regulator-b"] },
+    { "type": "switch", "id": "regulator-c", "col": 960, "row": 20 },
+    { "type": "electricFloor", "id": "regulator-floor-c", "col": 976, "row": 24, "width": 8, "on": 2, "off": 1.4, "warning": 1, "disabledBy": "regulator-c" },
+    { "type": "door", "id": "regulator-door-c", "col": 986, "row": 17, "height": 8, "opensWith": ["regulator-a", "regulator-b", "regulator-c"] },
+    { "type": "electricFloor", "id": "defense-floor", "col": 1064, "row": 24, "width": 7, "on": 1.8, "off": 1.8, "warning": 1.1, "disabledBy": "regulator-c" },
+    { "type": "laser", "id": "defense-laser", "col": 1143, "row": 17, "orientation": "vertical", "length": 7, "on": 1.8, "off": 1.6, "warning": 1.1, "disabledBy": "regulator-c" },
+    { "type": "electricFloor", "id": "overload-floor-a", "col": 1242, "row": 24, "width": 10, "on": 2, "off": 1.5, "warning": 1, "disabledBy": "isolate-extraction" },
+    { "type": "laser", "id": "overload-laser-a", "col": 1273, "row": 17, "orientation": "vertical", "length": 7, "on": 1.8, "off": 1.5, "warning": 1, "offset": 1.5, "disabledBy": "isolate-extraction" },
+    { "type": "electricFloor", "id": "overload-floor-b", "col": 1292, "row": 24, "width": 12, "on": 2.2, "off": 1.5, "warning": 1, "disabledBy": "isolate-extraction" },
+    { "type": "laser", "id": "overload-laser-b", "col": 1315, "row": 17, "orientation": "vertical", "length": 7, "on": 1.8, "off": 1.6, "warning": 1, "disabledBy": "isolate-extraction" },
+    { "type": "movingPlatform", "id": "overload-shuttle", "col": 1238, "row": 22, "width": 4, "axis": "x", "travel": 16, "speed": 36, "wait": 1 },
+    { "type": "switch", "id": "isolate-extraction", "col": 1338, "row": 20 },
+    { "type": "door", "id": "stabilized-gate", "col": 1360, "row": 17, "height": 8, "opensWith": ["regulator-a", "regulator-b", "regulator-c", "isolate-extraction"] },
+    { "type": "electricFloor", "id": "escape-floor", "col": 1442, "row": 24, "width": 7, "on": 1.7, "off": 1.8, "warning": 1 },
+    { "type": "laser", "id": "escape-laser", "col": 1474, "row": 17, "orientation": "vertical", "length": 7, "on": 1.6, "off": 1.6, "warning": 1 },
+    { "type": "movingPlatform", "id": "escape-ferry", "col": 1438, "row": 22, "width": 4, "axis": "x", "travel": 16, "speed": 32, "wait": 1.1 },
+    { "type": "movingPlatform", "id": "escape-lift", "col": 1477, "row": 22, "width": 4, "axis": "y", "travel": -4, "speed": 26, "wait": 1.1 },
+    { "type": "door", "id": "security-access", "col": 1530, "row": 17, "height": 8, "opensWith": ["regulator-a", "regulator-b", "regulator-c", "isolate-extraction"] }
+  ],
+  "story": {
+    "beats": [
+      { "id": "reactor-arrival", "trigger": { "type": "start" }, "lines": [{ "speaker": "luma", "text": "Los registros de Pasillos apuntan aquí. El reactor alimenta algo ajeno a esta estación.", "duration": 3 }] },
+      { "id": "alien-extraction", "trigger": { "type": "zone", "col": 20, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Tecnología NÉXAR: usa nuestra energía para transportar prisioneros. Debemos cortar la extracción.", "duration": 3 }] },
+      { "id": "electric-training", "trigger": { "type": "zone", "col": 210, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Dron eléctrico delante: vigila su aviso y ataca al enfriarse. Su casco resiste energía, no es inmune.", "duration": 3 }] },
+      { "id": "technician-intro", "trigger": { "type": "zone", "col": 262, "row": 19, "width": 4, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Un técnico NÉXAR prepara un disparo. Tiene que detenerse: esquiva y aprovecha su recuperación.", "duration": 3 }] },
+      { "id": "transport-route", "trigger": { "type": "zone", "col": 410, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Las plataformas salvan los conductores. Espera sobre apoyo firme; abajo las descargas siguen por ciclos.", "duration": 3 }] },
+      { "id": "drone-defense", "trigger": { "type": "zone", "col": 608, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Drones protegen los reguladores. Busca cobertura y cambia de altura entre sus avisos.", "duration": 3 }] },
+      { "id": "regulation-plan", "trigger": { "type": "zone", "col": 808, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Activa los tres reguladores, de izquierda a derecha. Cada circuito abre su puerta y anula una descarga.", "duration": 3 }] },
+      { "id": "reactor-defenders", "trigger": { "type": "zone", "col": 1008, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Defensas del núcleo. Los reguladores han anulado sus peligros; aprovecha las pausas de los guardianes.", "duration": 3 }] },
+      { "id": "overload-checkpoint", "trigger": { "type": "zone", "col": 1185, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Punto de control. Sigue una sobrecarga: los circuitos ya activados se conservan si tu armadura cae.", "duration": 3 }] },
+      { "id": "escape-checkpoint", "trigger": { "type": "zone", "col": 1385, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Último punto de control. Las defensas del escape usan reserva: combina plataformas, cobertura y pausas.", "duration": 3 }] },
+      { "id": "escape-platforms", "trigger": { "type": "zone", "col": 1408, "row": 19, "width": 4, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Cruza en la plataforma. Después usa el ascensor para superar la compuerta dañada y flanquear la defensa.", "duration": 3 }] },
+      { "id": "overload-route", "trigger": { "type": "zone", "col": 1208, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "La energía busca una salida. Cruza por ciclos y alcanza el control elevado para aislar la extracción.", "duration": 3 }] },
+      { "id": "extraction-stopped", "trigger": { "type": "zone", "col": 1372, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Extracción detenida. El reactor está estable, pero las defensas del escape aún tienen energía de reserva.", "duration": 3 }] },
+      { "id": "omega-protocol", "blocking": true, "trigger": { "type": "zone", "col": 1555, "row": 19, "width": 9, "height": 6 }, "lines": [
+        { "speaker": "luma", "text": "Protocolo OMEGA activado. Unidad de defensa OMEGA-7 en funcionamiento" },
+        { "speaker": "piezod", "text": "Ya no pueden usar este reactor para transportar prisioneros. Vamos a por su unidad de defensa." }
+      ] }
+    ]
+  }
+}

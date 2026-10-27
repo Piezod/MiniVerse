@@ -90,4 +90,5 @@ export interface ObjectIssue {
 export interface LevelDimensions {
   width: number;
   height: number;
+  externalSignals?: readonly string[];
 }

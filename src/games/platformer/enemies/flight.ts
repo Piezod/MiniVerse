@@ -19,6 +19,12 @@ const clamp = (v: number, min: number, max: number): number => Math.min(max, Mat
  */
 export function hoverPatrol(pos: Point, home: Point, zone: PatrolZone, speed: number, dir: 1 | -1, elapsed: number): Velocity & { dir: 1 | -1 } {
   let next = dir;
+  if (zone.axis === 'y') {
+    if (pos.y >= home.y + zone.range) next = -1;
+    else if (pos.y <= home.y - zone.range) next = 1;
+    const wantedX = home.x + Math.sin(elapsed * 2) * zone.bob;
+    return { vx: clamp((wantedX - pos.x) * 2, -speed, speed), vy: next * speed, dir: next };
+  }
   if (pos.x >= home.x + zone.range) next = -1;
   else if (pos.x <= home.x - zone.range) next = 1;
   if (Math.abs(pos.x - home.x) > zone.range + 1) next = Math.sign(home.x - pos.x) > 0 ? 1 : -1;
@@ -35,10 +41,12 @@ export function leashedChase(pos: Point, target: Point, home: Point, zone: Patro
   const direction = standoff > 0 ? (length < standoff - 12 ? -1 : length > standoff + 12 ? 1 : 0) : 1;
   let vx = (dx / length) * speed * direction;
   let vy = (dy / length) * speed * direction;
-  const minX = home.x - zone.range - zone.leash;
-  const maxX = home.x + zone.range + zone.leash;
-  const minY = home.y - zone.bob - zone.leash;
-  const maxY = home.y + zone.bob + zone.leash;
+  const horizontal = zone.axis === 'y' ? zone.bob : zone.range;
+  const vertical = zone.axis === 'y' ? zone.range : zone.bob;
+  const minX = home.x - horizontal - zone.leash;
+  const maxX = home.x + horizontal + zone.leash;
+  const minY = home.y - vertical - zone.leash;
+  const maxY = home.y + vertical + zone.leash;
   if ((pos.x <= minX && vx < 0) || (pos.x >= maxX && vx > 0)) vx = 0;
   if ((pos.y <= minY && vy < 0) || (pos.y >= maxY && vy > 0)) vy = 0;
   return { vx, vy };
