@@ -22,9 +22,9 @@
     "icon": 1,
     "requires": null,
     "levels": [
-      { "cost": 8, "energy": 15, "cooldown": 0.45, "params": { "damage": 1, "range": 150, "speed": 260 } },
-      { "cost": 18, "energy": 12, "cooldown": 0.3, "params": { "damage": 1.5, "range": 190, "speed": 300 } },
-      { "cost": 30, "energy": 10, "cooldown": 0.25, "params": { "damage": 2, "range": 220, "speed": 320 } }
+      { "cost": 8, "energy": 10, "cooldown": 0.45, "params": { "damage": 0.5, "range": 75, "speed": 260 } },
+      { "cost": 18, "energy": 8, "cooldown": 0.3, "params": { "damage": 0.75, "range": 100, "speed": 300 } },
+      { "cost": 30, "energy": 6, "cooldown": 0.25, "params": { "damage": 0.1, "range": 120, "speed": 320 } }
     ],
     "assets": { "icon": 1, "projectile": "beam", "anim": "shoot" }
   },
@@ -61,9 +61,9 @@
     "icon": 1,
     "requires": "ice-1",
     "levels": [
-      { "cost": 25, "energy": 30, "cooldown": 0.9, "params": { "damage": 1, "chargedDamage": 2.5, "chargeTime": 1.2, "range": 200, "pierce": 2, "beamHeight": 4 } },
-      { "cost": 35, "energy": 26, "cooldown": 0.8, "params": { "damage": 1.25, "chargedDamage": 3.5, "chargeTime": 1, "range": 230, "pierce": 3, "beamHeight": 4 } },
-      { "cost": 45, "energy": 22, "cooldown": 0.7, "params": { "damage": 1.5, "chargedDamage": 4.5, "chargeTime": 0.9, "range": 260, "pierce": 4, "beamHeight": 5 } }
+      { "cost": 25, "energy": 30, "cooldown": 0.9, "params": { "damage": 0.5, "chargedDamage": 2.5, "chargeTime": 1.2, "range": 100, "pierce": 2, "beamHeight": 4 } },
+      { "cost": 35, "energy": 33, "cooldown": 0.8, "params": { "damage": 0.5, "chargedDamage": 3.5, "chargeTime": 1, "range": 120, "pierce": 2, "beamHeight": 4 } },
+      { "cost": 45, "energy": 35, "cooldown": 0.7, "params": { "damage": 0.5, "chargedDamage": 4.5, "chargeTime": 0.9, "range": 140, "pierce": 3, "beamHeight": 5 } }
     ],
     "assets": { "icon": 1, "color": "#ff4d6d", "anim": "shoot" }
   },

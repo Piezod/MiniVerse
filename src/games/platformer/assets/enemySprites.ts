@@ -38,6 +38,23 @@ export const ENEMY_SPRITES: Readonly<Record<string, EnemySpriteDef>> = {
   'spore-spitter': { texture: TEX.sporeSpitter, body: { width: 18, height: 16, offsetX: 3, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0], attack: [1], death: [2] } },
   omega: { texture: TEX.omega, body: { width: 32, height: 40, offsetX: 8, offsetY: 8 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
   'swarm-queen': { texture: TEX.swarmQueen, body: { width: 30, height: 34, offsetX: 9, offsetY: 12 }, facesLeft: true, frameRate: 5, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  'sentenio-001': {
+  texture: TEX.sentenio001,
+  body: {
+    width: 64,
+    height: 100,
+    offsetX: 16,
+    offsetY: 14
+  },
+  facesLeft: true,
+  frameRate: 5,
+  anims: {
+    move: [0, 1],
+    attack: [2],
+    death: [3],
+    recover: [4]
+  }
+},
 };
 
 export const enemyAnimKey = (sprite: string, anim: 'move' | 'attack' | 'recover' | 'death'): string => `platformer.enemy.${sprite}.${anim}`;

@@ -8,17 +8,31 @@
     {
       "name": "Entrada y primer registro",
       "rows": [
-        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
-        "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "XXX", "XXX",
-        "............................................................................................S.......................D",
-        "............................S.............................D.............................==========......................................S",
+        "XXX",
+        "XXX",
+        "........................................................................................T...S...........D......D....D",
+        "............................S..............D..............D..............D..............==========...................G..................S",
         "........................=========...................................................................................................==========",
         "............................................................................XXXXXX..====",
         "....................====....................XXXXX...........................XXXXXX..............................................====",
-        "......P.........S...1...................====XXXXX...S...................S===XXXXXX==............................S....................................S",
+        "......P.........S...1.......................XXXXX...S........G..........S===XXXXXX==..............G.............S............R..........G............S",
         "################################################################################################################################################################",
         "################################################################################################################################################################",
         "################################################################################################################################################################"
@@ -27,17 +41,31 @@
     {
       "name": "Pasillo defensivo",
       "rows": [
-        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
-        "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "XXX", "XXX",
-        "........................D...........................................................................................................D.S",
-        "......................................................................................S...........................................==========",
+        "XXX",
+        "XXX",
+        "........................D.....................................................D.....................................................D.S",
+        ".............................D........................................................S.....................D.....................==========",
         "..................................................................................==========",
         "..............................................................................................................................====",
-        "......................................................................XXXXX...====....................................XXXXXX",
-        "..........S.....2...........S................T..............G.S...====XXXXX...................................S...====XXXXXX==........................S",
+        "......................................................................XXXXX...====....................................XXXXXX....D",
+        "..........S...T.2...........S.......G........T.........R....G.S...====XXXXX.........G.......D.................S.D.====XXXXXX==............G.......R...S",
         "################################################################################################################################################################",
         "################################################################################################################################################################",
         "################################################################################################################################################################"
@@ -46,16 +74,31 @@
     {
       "name": "Puertas e interruptores",
       "rows": [
-        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
-        "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "XXX", "XXX", "............................................................................................................................D",
-        "..............................................S........................................................................................S",
-        "........................................============..............................................................................============",
+        "XXX",
+        "XXX",
+        "..........................D.................................................................................................D",
+        "........................................T.....S............................................D...........................................S",
+        "........................................============..........................D...................................................============",
         "",
         "..................................XXXXX=...............................................XXXXX..................................====",
-        "..........3.....S.....G.......====XXXXX.....................S...T.................S====XXXXX......S.........................................G.........S",
+        "..........3.T...S.....G.......====XXXXX..........D..........S...T........D........S====XXXXX......S.T........D.........G........G...........G....R....S",
         "################################################################################################################################################################",
         "################################################################################################################################################################",
         "################################################################################################################################################################"
@@ -64,16 +107,31 @@
     {
       "name": "Encuentro blindado",
       "rows": [
-        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
-        "...............................S........................D.......................................S...........D",
-        "...........................==========.......................................................==========",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "...............................S............D...........D...................D...............T...S...........D",
+        "...........................==========.................................................D.....==========",
         "",
         ".......................====.............................................................====.....................................XXXXXX",
-        "........................................XXXXXX.....................................XXXXXX........................................XXXXXX",
-        "............4...G..S===.............====XXXXXX...S................T............S===XXXXXX.................................S..====XXXXXX...S.......K......S",
+        ".......................................DXXXXXX.....................................XXXXXX........................................XXXXXX",
+        "............4...G..S===.T........T..====XXXXXX...S................T............S===XXXXXX......G.........D......D.........S..====XXXXXX...S.......K......S",
         "################################################################################################################################################################",
         "################################################################################################################################################################",
         "################################################################################################################################################################"
@@ -84,24 +142,29 @@
       "rows": [
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
         "XXX...................................................................D",
         "XXX..................................................S...............S",
-        "XXX..............................................==========......===================...S",
+        "XXX................................D.............==========......===================...S",
         "XXX.................................................................................XXXXXXXXX",
         "XXX.................................................................................XXXXXXXXX",
         "XXX.......................................................D.........................XXXXXXXXX",
         "XXX.................................................................................XXXXXXXXX......S",
-        "XXX...............................D.................................................XXXXXXXXX============",
+        "XXX...............................D........................D........................XXXXXXXXX============",
         "XXX............................S....................................................XXXXXXXXX",
         "XXX.........................============............................................XXXXXXXXX",
-        "XXX.................................................................................XXXXXXXXX...................D",
+        "XXX.................................................................................XXXXXXXXX.........D.........D",
         "....................................................................................XXXXXXXXX.....................S",
         "....................................................................................XXXXXXXXX.................==========",
         "....................................................................................XXXXXXXXX",
         "....................................................................................XXXXXXXXX",
         "....................................................................................XXXXXXXXX",
-        "........5......S....................................................................XXXXXXXXX..................................................S",
+        "........5......S...........................................................T........XXXXXXXXX.................G...................G.....R......S..T",
         "################################################################################################################################################################",
         "################################################################################################################################################################",
         "################################################################################################################################################################"
@@ -110,16 +173,31 @@
     {
       "name": "Bloqueo de seguridad",
       "rows": [
-        "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX", "XXX",
-        "XXX", "XXX", "XXX", "XXX", "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
+        "XXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "XXX", "XXX", "",
-        "..................................................................................................................D.......................S",
-        "............................................................S..........................................................................==========",
-        ".........................................................==========",
-        "..........................................................................................................................XXXXX....====",
-        "........6..........S...............D...........S..XXX====.......T................S.....................S..G...........====XXXXX.........................S",
+        "XXX",
+        "XXX",
+        "",
+        "..................................................................................................................D...........D...........S....T",
+        "............................................................S.....................................D....................................==========",
+        ".........................................................==========..............D",
+        ".......................................................T.................................................................TXXXXX....====",
+        "........6.R........S.......R.......D......R....S..XXX====.......T................S....R.....D..........S..G...........====XXXXX............G............S",
         "################################################################################################################################################################",
         "################################################################################################################################################################",
         "################################################################################################################################################################"
@@ -148,11 +226,11 @@
         "XXX...........................................................................................................................................................XX",
         "XXX...........................................................................................................................................................XX",
         "..............................................................................................................................................................XX",
-        ".....................................................S......................................S.................................................................XX",
+        ".....................................................S..........................D...........S.................................................................XX",
         ".................................................==========............................===========............................................................XX",
         "...........................................................................XXXXXX.............................................................................XX",
-        "......................................XXXXX..====..........................XXXXXX..====.......................................................................XX",
-        "............S.....7...............====XXXXX..........R............G..S.====XXXXXX............................S.............8.............S..........O.........XX",
+        ".......................D..............XXXXX..====..........................XXXXXX..====.......................................................................XX",
+        "............S.....7...............====XXXXX...T......R............G..S.====XXXXXX..............D.............S.............8.............S..........O.........XX",
         "################################################################################################################################################################",
         "################################################################################################################################################################",
         "################################################################################################################################################################"
@@ -160,51 +238,379 @@
     }
   ],
   "signs": {
-    "1": { "keyboard": "REGISTRO 01", "touch": "REGISTRO 01" },
-    "2": { "keyboard": "DEFENSA ALTERADA", "touch": "DEFENSA ALTERADA" },
-    "3": { "keyboard": "DOS CIRCUITOS", "touch": "DOS CIRCUITOS" },
-    "4": { "keyboard": "COBERTURA", "touch": "COBERTURA" },
-    "5": { "keyboard": "MANTENIMIENTO", "touch": "MANTENIMIENTO" },
-    "6": { "keyboard": "ANULAR SEGURIDAD", "touch": "ANULAR SEGURIDAD" },
-    "7": { "keyboard": "ARCHIVO HUMANO", "touch": "ARCHIVO HUMANO" },
-    "8": { "keyboard": "REGISTRO 03", "touch": "REGISTRO 03" }
+    "1": {
+      "keyboard": "REGISTRO 01",
+      "touch": "REGISTRO 01"
+    },
+    "2": {
+      "keyboard": "DEFENSA ALTERADA",
+      "touch": "DEFENSA ALTERADA"
+    },
+    "3": {
+      "keyboard": "DOS CIRCUITOS",
+      "touch": "DOS CIRCUITOS"
+    },
+    "4": {
+      "keyboard": "COBERTURA",
+      "touch": "COBERTURA"
+    },
+    "5": {
+      "keyboard": "MANTENIMIENTO",
+      "touch": "MANTENIMIENTO"
+    },
+    "6": {
+      "keyboard": "ANULAR SEGURIDAD",
+      "touch": "ANULAR SEGURIDAD"
+    },
+    "7": {
+      "keyboard": "ARCHIVO HUMANO",
+      "touch": "ARCHIVO HUMANO"
+    },
+    "8": {
+      "keyboard": "REGISTRO 03",
+      "touch": "REGISTRO 03"
+    }
   },
-  "enemies": { "D": "drone-scout", "T": "auto-turret", "R": "auto-turret-right", "G": "armored-guardian" },
+  "enemies": {
+    "D": "drone-scout",
+    "T": "auto-turret",
+    "R": "auto-turret-right",
+    "G": "armored-guardian"
+  },
   "objects": [
-    { "type": "laser", "id": "defense-a", "col": 254, "row": 17, "orientation": "vertical", "length": 7, "on": 1.5, "off": 1.4, "warning": 0.8 },
-    { "type": "laser", "id": "defense-b", "col": 298, "row": 17, "orientation": "vertical", "length": 7, "on": 1.5, "off": 1.4, "warning": 0.8, "offset": 1.85 },
-    { "type": "switch", "id": "circuit-a", "col": 368, "row": 20 },
-    { "type": "door", "id": "gate-a", "col": 392, "row": 17, "height": 8, "opensWith": "circuit-a" },
-    { "type": "switch", "id": "circuit-b", "col": 414, "row": 24 },
-    { "type": "door", "id": "gate-b", "col": 438, "row": 17, "height": 8, "opensWith": ["circuit-a", "circuit-b"] },
-    { "type": "switch", "id": "maintenance-power", "col": 657, "row": 24 },
-    { "type": "door", "id": "maintenance-access", "col": 665, "row": 17, "height": 8, "opensWith": "maintenance-power" },
-    { "type": "movingPlatform", "id": "lift-lower", "col": 662, "row": 25, "width": 4, "axis": "y", "travel": -8, "speed": 32, "wait": 1 },
-    { "type": "movingPlatform", "id": "lift-upper", "col": 681, "row": 17, "width": 4, "axis": "y", "travel": -7, "speed": 30, "wait": 1 },
-    { "type": "movingPlatform", "id": "upper-shuttle", "col": 697, "row": 10, "width": 4, "axis": "x", "travel": 8, "speed": 36, "wait": 0.8 },
-    { "type": "switch", "id": "override-a", "col": 818, "row": 24 },
-    { "type": "laser", "id": "lockdown-a", "col": 850, "row": 17, "orientation": "vertical", "length": 7, "on": 1.8, "off": 1.2, "warning": 0.9, "disabledBy": "override-a" },
-    { "type": "door", "id": "lockdown-door-a", "col": 872, "row": 17, "height": 8, "opensWith": "override-a" },
-    { "type": "switch", "id": "override-b", "col": 860, "row": 21 },
-    { "type": "laser", "id": "lockdown-b", "col": 908, "row": 17, "orientation": "vertical", "length": 7, "on": 1.6, "off": 1.3, "warning": 0.9, "disabledBy": "override-b" },
-    { "type": "door", "id": "lockdown-door-b", "col": 930, "row": 17, "height": 8, "opensWith": ["override-a", "override-b"] }
+    {
+      "type": "laser",
+      "id": "defense-a",
+      "col": 254,
+      "row": 17,
+      "orientation": "vertical",
+      "length": 7,
+      "on": 1.5,
+      "off": 1.4,
+      "warning": 0.8
+    },
+    {
+      "type": "laser",
+      "id": "defense-b",
+      "col": 298,
+      "row": 17,
+      "orientation": "vertical",
+      "length": 7,
+      "on": 1.5,
+      "off": 1.4,
+      "warning": 0.8,
+      "offset": 1.85
+    },
+    {
+      "type": "switch",
+      "id": "circuit-a",
+      "col": 368,
+      "row": 20
+    },
+    {
+      "type": "door",
+      "id": "gate-a",
+      "col": 392,
+      "row": 17,
+      "height": 8,
+      "opensWith": "circuit-a"
+    },
+    {
+      "type": "switch",
+      "id": "circuit-b",
+      "col": 414,
+      "row": 24
+    },
+    {
+      "type": "door",
+      "id": "gate-b",
+      "col": 438,
+      "row": 17,
+      "height": 8,
+      "opensWith": [
+        "circuit-a",
+        "circuit-b"
+      ]
+    },
+    {
+      "type": "switch",
+      "id": "maintenance-power",
+      "col": 657,
+      "row": 24
+    },
+    {
+      "type": "door",
+      "id": "maintenance-access",
+      "col": 665,
+      "row": 17,
+      "height": 8,
+      "opensWith": "maintenance-power"
+    },
+    {
+      "type": "movingPlatform",
+      "id": "lift-lower",
+      "col": 662,
+      "row": 25,
+      "width": 4,
+      "axis": "y",
+      "travel": -8,
+      "speed": 32,
+      "wait": 1
+    },
+    {
+      "type": "movingPlatform",
+      "id": "lift-upper",
+      "col": 681,
+      "row": 17,
+      "width": 4,
+      "axis": "y",
+      "travel": -7,
+      "speed": 30,
+      "wait": 1
+    },
+    {
+      "type": "movingPlatform",
+      "id": "upper-shuttle",
+      "col": 697,
+      "row": 10,
+      "width": 4,
+      "axis": "x",
+      "travel": 8,
+      "speed": 36,
+      "wait": 0.8
+    },
+    {
+      "type": "switch",
+      "id": "override-a",
+      "col": 818,
+      "row": 24
+    },
+    {
+      "type": "laser",
+      "id": "lockdown-a",
+      "col": 850,
+      "row": 17,
+      "orientation": "vertical",
+      "length": 7,
+      "on": 1.8,
+      "off": 1.2,
+      "warning": 0.9,
+      "disabledBy": "override-a"
+    },
+    {
+      "type": "door",
+      "id": "lockdown-door-a",
+      "col": 872,
+      "row": 17,
+      "height": 8,
+      "opensWith": "override-a"
+    },
+    {
+      "type": "switch",
+      "id": "override-b",
+      "col": 860,
+      "row": 21
+    },
+    {
+      "type": "laser",
+      "id": "lockdown-b",
+      "col": 908,
+      "row": 17,
+      "orientation": "vertical",
+      "length": 7,
+      "on": 1.6,
+      "off": 1.3,
+      "warning": 0.9,
+      "disabledBy": "override-b"
+    },
+    {
+      "type": "door",
+      "id": "lockdown-door-b",
+      "col": 930,
+      "row": 17,
+      "height": 8,
+      "opensWith": [
+        "override-a",
+        "override-b"
+      ]
+    }
   ],
   "story": {
     "beats": [
-      { "id": "corridors-arrival", "trigger": { "type": "start" }, "lines": [{ "speaker": "luma", "text": "La señal humana sigue por estos pasillos. La seguridad ya no responde a mis órdenes.", "duration": 2.5 }] },
-      { "id": "security-log-one", "trigger": { "type": "zone", "col": 18, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "transmision", "text": "REGISTRO 01: alarma de intrusión. Personal reunido por la fuerza. Orden de evacuación anulada.", "duration": 3 }] },
-      { "id": "reprogrammed-defense", "trigger": { "type": "zone", "col": 172, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Los NÉXAR reprogramaron las defensas. La torreta fija avisa en rojo: salta o busca cobertura.", "duration": 3 }] },
-      { "id": "two-circuits", "trigger": { "type": "zone", "col": 329, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Guardián delante. Su escudo bloquea el frente: salta la embestida y ataca por detrás al recuperarse.", "duration": 3 }] },
-      { "id": "armored-defense", "trigger": { "type": "zone", "col": 490, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Torreta y explorador. Cambia de altura para esquivar sus ataques y aprovecha la recarga.", "duration": 3 }] },
-      { "id": "security-log-two", "trigger": { "type": "zone", "col": 618, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "transmision", "text": "REGISTRO 02: civiles detenidos. Destino: plataforma de transporte exterior. No fue una evacuación.", "duration": 3 }] },
-      { "id": "maintenance-route", "trigger": { "type": "zone", "col": 647, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Activa el acceso. Los ascensores de mantenimiento llevan al paso superior; abajo hay un muro cerrado.", "duration": 3 }] },
-      { "id": "combined-security", "trigger": { "type": "zone", "col": 806, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Los interruptores abren puertas y anulan sus láseres. Actívalos antes de avanzar al siguiente sector.", "duration": 3 }] },
-      { "id": "archive-rest", "trigger": { "type": "zone", "col": 976, "row": 19, "width": 5, "height": 6 }, "lines": [{ "speaker": "luma", "text": "Último puesto defensivo. La torreta apunta a la derecha; cruza por arriba y flanquea al guardián.", "duration": 2.5 }] },
-      { "id": "transport-record", "blocking": true, "trigger": { "type": "zone", "col": 1081, "row": 19, "width": 8, "height": 6 }, "lines": [
-        { "speaker": "transmision", "text": "REGISTRO 03: prisioneros humanos transferidos a una nave NÉXAR. Transporte fuera de la estación confirmado." },
-        { "speaker": "luma", "text": "La tripulación fue capturada, no evacuada. Los registros de destino están en el reactor." },
-        { "speaker": "piezod", "text": "Entonces seguiremos su rastro. Guarda el manifiesto, LUMA." }
-      ] }
+      {
+        "id": "corridors-arrival",
+        "trigger": {
+          "type": "start"
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "La señal humana sigue por estos pasillos. La seguridad ya no responde a mis órdenes.",
+            "duration": 2.5
+          }
+        ]
+      },
+      {
+        "id": "security-log-one",
+        "trigger": {
+          "type": "zone",
+          "col": 18,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "transmision",
+            "text": "REGISTRO 01: alarma de intrusión. Personal reunido por la fuerza. Orden de evacuación anulada.",
+            "duration": 3
+          }
+        ]
+      },
+      {
+        "id": "reprogrammed-defense",
+        "trigger": {
+          "type": "zone",
+          "col": 172,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Los NÉXAR reprogramaron las defensas. La torreta fija avisa en rojo: salta o busca cobertura.",
+            "duration": 3
+          }
+        ]
+      },
+      {
+        "id": "two-circuits",
+        "trigger": {
+          "type": "zone",
+          "col": 329,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Guardián delante. Su escudo bloquea el frente: salta la embestida y ataca por detrás al recuperarse.",
+            "duration": 3
+          }
+        ]
+      },
+      {
+        "id": "armored-defense",
+        "trigger": {
+          "type": "zone",
+          "col": 490,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Torreta y explorador. Cambia de altura para esquivar sus ataques y aprovecha la recarga.",
+            "duration": 3
+          }
+        ]
+      },
+      {
+        "id": "security-log-two",
+        "trigger": {
+          "type": "zone",
+          "col": 618,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "transmision",
+            "text": "REGISTRO 02: civiles detenidos. Destino: plataforma de transporte exterior. No fue una evacuación.",
+            "duration": 3
+          }
+        ]
+      },
+      {
+        "id": "maintenance-route",
+        "trigger": {
+          "type": "zone",
+          "col": 647,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Activa el acceso. Los ascensores de mantenimiento llevan al paso superior; abajo hay un muro cerrado.",
+            "duration": 3
+          }
+        ]
+      },
+      {
+        "id": "combined-security",
+        "trigger": {
+          "type": "zone",
+          "col": 806,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Los interruptores abren puertas y anulan sus láseres. Actívalos antes de avanzar al siguiente sector.",
+            "duration": 3
+          }
+        ]
+      },
+      {
+        "id": "archive-rest",
+        "trigger": {
+          "type": "zone",
+          "col": 976,
+          "row": 19,
+          "width": 5,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "luma",
+            "text": "Último puesto defensivo. La torreta apunta a la derecha; cruza por arriba y flanquea al guardián.",
+            "duration": 2.5
+          }
+        ]
+      },
+      {
+        "id": "transport-record",
+        "blocking": true,
+        "trigger": {
+          "type": "zone",
+          "col": 1081,
+          "row": 19,
+          "width": 8,
+          "height": 6
+        },
+        "lines": [
+          {
+            "speaker": "transmision",
+            "text": "REGISTRO 03: prisioneros humanos transferidos a una nave NÉXAR. Transporte fuera de la estación confirmado."
+          },
+          {
+            "speaker": "luma",
+            "text": "La tripulación fue capturada, no evacuada. Los registros de destino están en el reactor."
+          },
+          {
+            "speaker": "piezod",
+            "text": "Entonces seguiremos su rastro. Guarda el manifiesto, LUMA."
+          }
+        ]
+      }
     ]
   }
 }

@@ -790,7 +790,7 @@ describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
 
 describe('Capitulo 1: densidad y espacio de combate', () => {
   it.each([
-    ['c1-1-hangar', 9, 12, [2, 3, 1, 1, 3, 2]],
+    ['c1-1-hangar', 24, 24, [4, 6, 2, 2, 6, 4]],
     ['c1-2-corridors', 20, 26, [2, 4, 4, 4, 4, 4, 2]],
     ['c1-3-reactor', 25, 32, [2, 4, 4, 5, 2, 5, 2, 4]],
     ['c1-4-omega', 8, 8, [1, 3, 0, 3, 1, 0]],
@@ -840,8 +840,22 @@ describe('Hangar: nivel, drones y narrativa', () => {
     expect(validation.parsed!.stars).toHaveLength(27);
     expect(validation.parsed!.checkpoints).toHaveLength(2);
     expect(validation.parsed!.portals).toHaveLength(1);
-    expect(validation.parsed!.enemies).toHaveLength(12);
+    expect(validation.parsed!.enemies).toHaveLength(24);
     expect(new Set(validation.parsed!.enemies.map((enemy) => enemy.type))).toEqual(new Set(['drone-scout', 'drone-sentinel']));
+  });
+
+  it('mantiene los drones dentro del nivel, entre techo y suelo y fuera del terreno', () => {
+    const level = validation.parsed!;
+    for (const enemy of level.enemies) {
+      expect(enemy.col).toBeGreaterThan(0);
+      expect(enemy.col).toBeLessThan(level.width - 1);
+      expect(enemy.row).toBeGreaterThan(0);
+      expect(enemy.row).toBeLessThan(level.height - 3);
+      expect(level.terrain[enemy.row][enemy.col]).toBeNull();
+      expect(level.terrain[enemy.row - 1][enemy.col]).toBeNull();
+      expect(level.terrain.slice(0, enemy.row).some((row) => row[enemy.col] === 'stone')).toBe(true);
+      expect(level.terrain.slice(enemy.row + 1).some((row) => row[enemy.col] === 'ground' || row[enemy.col] === 'stone')).toBe(true);
+    }
   });
 
   it('resuelve plataformas, peligros e interruptor sin referencias inexistentes', () => {
@@ -859,7 +873,7 @@ describe('Hangar: nivel, drones y narrativa', () => {
 
   it('alterna seis encuentros y deja descanso antes de la terminal', () => {
     expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DN]/g) ?? [])).toEqual([
-      ['D', 'D'], ['D', 'D', 'D'], ['D'], ['N'], ['D', 'N', 'D'], ['D', 'N'],
+      ['N', 'D', 'D', 'D'], ['N', 'D', 'N', 'D', 'D', 'D'], ['N', 'D'], ['D', 'N'], ['D', 'D', 'D', 'N', 'D', 'D'], ['N', 'D', 'D', 'N'],
     ]);
     const terminal = story.beats.find((beat) => beat.id === 'terminal')!.trigger;
     expect(terminal.type).toBe('zone');

@@ -60,6 +60,7 @@ export const TEX = {
   bioTechnician: 'platformer.enemy.bio-technician',
   stalker: 'platformer.enemy.stalker',
   omega: 'platformer.enemy.omega',
+  sentenio001: 'platformer.enemy.sentenio-001',
   swarmQueen: 'platformer.enemy.swarm-queen',
   projectiles: 'platformer.projectiles',
   abilityIcons: 'platformer.ability-icons',
@@ -124,6 +125,21 @@ export const PLATFORMER_ASSETS: readonly AssetDef[] = [
   { kind: 'spritesheet', key: TEX.omega, frameWidth: 48, frameHeight: 48, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawOmegaFrame },
   { kind: 'spritesheet', key: TEX.swarmQueen, frameWidth: 48, frameHeight: 48, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawSwarmQueenFrame },
   { kind: 'spritesheet', key: TEX.projectiles, frameWidth: 8, frameHeight: 8, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawProjectileFrame },
-  { kind: 'spritesheet', key: TEX.abilityIcons, frameWidth: 8, frameHeight: 8, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawAbilityIcon },
+  { kind: 'spritesheet', key: TEX.abilityIcons, frameWidth: 8, frameHeight: 8, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawAbilityIcon },  
+  {
+  kind: 'spritesheet',
+  key: TEX.sentenio001,
+  url: 'assets/platformer/spritesheets/sentenio001/sentenio-001-spritesheet.png',
+  frameWidth: 96,
+  frameHeight: 128,
+  frameCount: 5,
+  credit: {
+    author: 'MiniVerse',
+    source: 'Sentenio 001 - sprite generado con IA y preparado para MiniVerse',
+    license: 'Recurso generado para el proyecto'
+  },
+  drawPlaceholder: drawOmegaFrame
+  },
+
   ...Object.values(AUDIO),
 ];
