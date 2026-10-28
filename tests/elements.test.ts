@@ -336,7 +336,7 @@ describe('modular weapons (abilities.json)', () => {
   });
 
   it('shop card summary shows damage, energy, cooldown and effects', () => {
-    expect(weaponSummary(abilities.abilities.beam, 2, statuses.effects)).toEqual({ damage: '1.5', energy: '12', cooldown: '0.3s', effects: '-' });
+    expect(weaponSummary(abilities.abilities.beam, 2, statuses.effects)).toEqual({ damage: '0.75', energy: '8', cooldown: '0.3s', effects: '-' });
     expect(weaponSummary(abilities.abilities.flamethrower, 1, statuses.effects)).toEqual({
       damage: '0.2-0.8/tick',
       energy: '40/s',

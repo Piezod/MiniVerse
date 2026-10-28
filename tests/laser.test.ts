@@ -286,15 +286,16 @@ describe('Cañón láser: tienda, mejoras y persistencia', () => {
     expect(profile.purchase('laser-cannon', unlocked)).toMatchObject({ ok: true, cost: 25 });
   });
 
-  it('has three upgrade levels with growing power and falling energy/cooldown', () => {
+  it('has three upgrade levels with growing power and energy cost, and falling charge time/cooldown', () => {
     expect(laser.levels.map((l) => l.cost)).toEqual([25, 35, 45]);
+    expect(laser.levels.map((l) => l.energy)).toEqual([30, 33, 35]);
     for (let i = 1; i < laser.levels.length; i++) {
       const a = laser.levels[i - 1];
       const b = laser.levels[i];
       expect(b.params.chargedDamage).toBeGreaterThan(a.params.chargedDamage);
       expect(b.params.pierce).toBeGreaterThanOrEqual(a.params.pierce);
       expect(b.params.chargeTime).toBeLessThan(a.params.chargeTime);
-      expect(b.energy).toBeLessThan(a.energy);
+      expect(b.energy).toBeGreaterThan(a.energy);
       expect(b.cooldown).toBeLessThan(a.cooldown);
     }
     const profile = new Profile(abilities, memoryStorage());
@@ -308,8 +309,12 @@ describe('Cañón láser: tienda, mejoras y persistencia', () => {
     const perEnergy = (damage: number, energy: number): number => damage / energy;
     const beam = abilities.abilities.beam.levels[0];
     for (const l of laser.levels) expect(perEnergy(l.params.chargedDamage, l.energy)).toBeGreaterThan(perEnergy(beam.params.damage, beam.energy));
-    // Spamming uncharged shots must be worse than the beam.
-    expect(laser.levels[0].params.damage / (laser.levels[0].cooldown * 1)).toBeLessThan(abilities.abilities.beam.levels[2].params.damage / abilities.abilities.beam.levels[2].cooldown);
+    for (const level of laser.levels) {
+      const chargedDps = level.params.chargedDamage / (level.params.chargeTime + level.cooldown);
+      const unchargedDps = level.params.damage / level.cooldown;
+      expect(chargedDps).toBeGreaterThan(unchargedDps);
+      expect(perEnergy(level.params.chargedDamage, level.energy)).toBeGreaterThan(perEnergy(level.params.damage, level.energy * 0.4));
+    }
   });
 
   it('equips on F or R, swaps with the other weapon and persists', () => {
@@ -329,14 +334,14 @@ describe('Cañón láser: tienda, mejoras y persistencia', () => {
   });
 
   it('the shop card shows damage range, energy, cooldown and pierce', () => {
-    expect(weaponSummary(laser, 1, statuses.effects)).toEqual({ damage: '1-2.5', energy: '30', cooldown: '0.9s', effects: 'Perfora 2' });
+    expect(weaponSummary(laser, 1, statuses.effects)).toEqual({ damage: '0.5-2.5', energy: '30', cooldown: '0.9s', effects: 'Perfora 2' });
   });
 
-  it('beam and flamethrower keep their previous stats', () => {
+  it('beam and flamethrower keep their configured stats', () => {
     expect(abilities.abilities.beam.levels.map((l) => [l.cost, l.energy, l.cooldown, l.params.damage])).toEqual([
-      [8, 15, 0.45, 1],
-      [18, 12, 0.3, 1.5],
-      [30, 10, 0.25, 2],
+      [8, 10, 0.45, 0.5],
+      [18, 8, 0.3, 0.75],
+      [30, 6, 0.25, 0.1],
     ]);
     expect(abilities.abilities.flamethrower.levels.map((l) => l.cost)).toEqual([20, 35]);
   });

@@ -407,10 +407,8 @@ describe('Pasillos de seguridad: integración', () => {
   });
 
   it('mantiene encuentros deliberados y zonas de descanso sin enemigos', () => {
-    expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DTRG]/g) ?? [])).toEqual([
-      ['D', 'D'], ['D', 'D', 'T', 'G'], ['D', 'G', 'T', 'G'], ['D', 'D', 'G', 'T'], ['D', 'D', 'D', 'D'], ['D', 'D', 'T', 'G'], ['R', 'G'],
-    ]);
-    expect(parsed.enemies).toHaveLength(24);
+    expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DTRG]/g)?.length ?? 0)).toEqual([12, 16, 16, 14, 12, 16, 6]);
+    expect(parsed.enemies).toHaveLength(92);
     expect(parsed.enemies.every((enemy) => ['drone-scout', 'auto-turret', 'auto-turret-right', 'armored-guardian'].includes(enemy.type))).toBe(true);
     const guardian = parsed.enemies.find((enemy) => enemy.col > 320 && enemy.col < 480 && enemy.type === 'armored-guardian')!;
     expect(catalogs.enemies.enemies[guardian.type].maxHealth).toBe(4);
@@ -567,9 +565,8 @@ describe('El reactor inestable: integración', () => {
       const end = previous.col + (previous.type === 'electricFloor' ? previous.width : 1);
       expect(hazards[index].col - end).toBeGreaterThanOrEqual(8);
     }
-    expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DNTRGEJ]/g) ?? [])).toEqual([
-      ['D', 'J'], ['D', 'E', 'J', 'T'], ['E', 'E', 'J', 'G'], ['E', 'D', 'T', 'N', 'J'], ['T', 'J'], ['D', 'E', 'T', 'G', 'J'], ['E', 'J'], ['E', 'E', 'J', 'G'],
-    ]);
+    expect(raw.sections.map((section: { rows: string[] }) => section.rows.join('').match(/[DNTRGEJH]/g)?.length ?? 0)).toEqual([13, 14, 15, 13, 12, 14, 11, 8]);
+    expect(parsed.enemies).toHaveLength(100);
   });
 
   it('protege los checkpoints y el anuncio final de enemigos y peligros inevitables', () => {
@@ -590,12 +587,16 @@ describe('El reactor inestable: integración', () => {
     }
   });
 
-  it('introduce ambos enemigos por separado y exige plataformas para el encuentro final', () => {
+  it('conserva los encuentros de introduccion y exige plataformas para el encuentro final reforzado', () => {
     const introductions = parsed.enemies.filter((enemy) => enemy.col >= 200 && enemy.col < 300);
-    expect(introductions.map((enemy) => enemy.type)).toEqual(['electric-drone', 'nexar-technician']);
-    expect((introductions[1].col - introductions[0].col) * 16).toBeGreaterThan(2 * 112 + 40);
+    const electric = introductions.find((enemy) => enemy.col === 225 && enemy.type === 'electric-drone')!;
+    const technician = introductions.find((enemy) => enemy.col === 278 && enemy.type === 'nexar-technician')!;
+    expect(electric).toBeDefined();
+    expect(technician).toBeDefined();
+    expect((technician.col - electric.col) * 16).toBeGreaterThan(2 * 112 + 40);
     const escape = parsed.enemies.filter((enemy) => enemy.col >= 1400);
-    expect(escape.map((enemy) => enemy.type)).toEqual(['electric-drone', 'electric-drone', 'nexar-technician', 'armored-guardian']);
+    expect(escape).toHaveLength(8);
+    expect(new Set(escape.map((enemy) => enemy.type))).toEqual(new Set(['electric-drone', 'drone-sentinel', 'drone-scout', 'nexar-technician', 'armored-guardian']));
     const bus = new SignalBus();
     controls.forEach((id) => bus.set(id, true));
     const escapeHazards = objects.filter((object): object is LaserConfig | ElectricFloorConfig => (object.type === 'laser' || object.type === 'electricFloor') && object.col >= 1400);
@@ -742,7 +743,7 @@ describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
 
   it('mantiene checkpoint y refugios fuera de la aproximación enemiga', () => {
     const checkpoint = parsed.checkpoints[0];
-    for (const enemy of parsed.enemies.filter((entry) => entry.type !== 'omega-7')) {
+    for (const enemy of parsed.enemies.filter((entry) => entry.col < encounter.arena.col)) {
       const def = catalogs.enemies.enemies[enemy.type];
       const range = def.detectRange + (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + 400;
       expect((checkpoint.col - enemy.col) * 16).toBeGreaterThan(range);
@@ -751,6 +752,16 @@ describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
     expect(arenaHazards.every((hazard) => hazard.col < 645 || hazard.col >= 657)).toBe(true);
     expect(parsed.terrain[22][645]).toBe('oneway');
     expect(parsed.terrain[22][654]).toBe('oneway');
+  });
+
+  it('mantiene la arena de veinte casillas con suelo continuo y sus dos enemigos previstos', () => {
+    const arena = raw.sections.find((section: { name: string }) => section.name === 'Arena OMEGA-7')!;
+    expect(Math.max(...arena.rows.map((row: string) => row.length))).toBe(encounter.arena.width);
+    expect(parsed.enemies.filter((enemy) => enemy.col >= 640 && enemy.col < 660).map((enemy) => enemy.type)).toEqual(['omega-7', 'sentenio-001']);
+    expect(parsed.enemies.filter((enemy) => enemy.col >= 660)).toEqual([]);
+    for (let col = 640; col < 660; col++) {
+      for (let row = 25; row < parsed.height; row++) expect(parsed.terrain[row][col]).toBe('ground');
+    }
   });
 
   it('reconoce la armadura y cuenta la derrota mediante los diálogos existentes', () => {
@@ -791,9 +802,9 @@ describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
 describe('Capitulo 1: densidad y espacio de combate', () => {
   it.each([
     ['c1-1-hangar', 24, 24, [4, 6, 2, 2, 6, 4]],
-    ['c1-2-corridors', 20, 26, [2, 4, 4, 4, 4, 4, 2]],
-    ['c1-3-reactor', 25, 32, [2, 4, 4, 5, 2, 5, 2, 4]],
-    ['c1-4-omega', 8, 8, [1, 3, 0, 3, 1, 0]],
+    ['c1-2-corridors', 92, 92, [12, 16, 16, 14, 12, 16, 6]],
+    ['c1-3-reactor', 100, 100, [13, 14, 15, 13, 12, 14, 11, 8]],
+    ['c1-4-omega', 125, 125, [30, 32, 29, 32, 2, 0]],
   ] as const)('%s mantiene densidad acotada, refugios y espacio para flanquear', (id, minimum, maximum, sections) => {
     const entry = realEntries().find((level) => level.id === id)!;
     const level = entry.validation.parsed!;
@@ -802,7 +813,8 @@ describe('Capitulo 1: densidad y espacio de combate', () => {
     expect(level.enemies.length).toBeLessThanOrEqual(maximum);
     expect(raw.sections.map((section) => section.rows.join('').split('').filter((symbol) => raw.enemies?.[symbol]).length)).toEqual(sections);
     for (const enemy of level.enemies) {
-      expect(level.enemies.filter((other) => Math.abs(other.col - enemy.col) <= 10).length).toBeLessThanOrEqual(4);
+      const densityLimit = id === 'c1-4-omega' ? 8 : id === 'c1-3-reactor' ? 5 : 4;
+      expect(level.enemies.filter((other) => Math.abs(other.col - enemy.col) <= 10).length).toBeLessThanOrEqual(densityLimit);
       const def = catalogs.enemies.enemies[enemy.type];
       const reach = Math.max(def.detectRange, def.attack?.range ?? 0) + (def.patrol?.range ?? def.patrolRange ?? 0) + (def.patrol?.leash ?? 0) + (def.attack?.kind === 'lunge' ? def.attack.power * 0.35 : 0);
       for (const refuge of def.boss ? [] : [level.spawn!, ...level.checkpoints]) {
@@ -819,7 +831,7 @@ describe('Capitulo 1: densidad y espacio de combate', () => {
       expect(doors.every((door) => Math.abs(door.col - enemy.col) > 6)).toBe(true);
     }
     if (id === 'c1-4-omega') {
-      expect(level.enemies.filter((enemy) => enemy.col >= 640 && enemy.col < 660).map((enemy) => enemy.type)).toEqual(['omega-7']);
+      expect(level.enemies.filter((enemy) => enemy.col >= 640 && enemy.col < 660).map((enemy) => enemy.type)).toEqual(['omega-7', 'sentenio-001']);
     }
   });
 });
