@@ -63,10 +63,10 @@ export interface BiomeStyle {
   /** Peaks above this y get a cap in `peak` colour (null = none). */
   snowLine: number | null;
   hillProps: 'pines' | 'rocks' | 'columns';
-  far: 'conifers' | 'stalagmites' | 'colonnade';
-  near: 'trunks' | 'pines' | 'pillars' | 'arches';
+  far: 'conifers' | 'stalagmites' | 'colonnade' | 'sporeGroves';
+  near: 'trunks' | 'pines' | 'pillars' | 'arches' | 'tendrils';
   surface: 'grass' | 'snow' | 'ash';
-  blocks: 'brick' | 'ice' | 'basalt' | 'carved';
+  blocks: 'brick' | 'ice' | 'basalt' | 'carved' | 'organic';
   foreground: 'blades' | 'drifts' | 'spikes';
 }
 
@@ -158,6 +158,12 @@ function drawBlock(ctx: Ctx, p: BiomePalette, s: BiomeStyle, ox: number, oy: num
     for (let k = 0; k < 6; k++) px(ctx, p.white, ox + 3 + k, oy + 10 - k, 1, 1);
     px(ctx, p.rockDark, ox, oy + 13, T, 2);
     px(ctx, p.rockLight, ox + 11, oy + 4, 2, 1);
+  } else if (s.blocks === 'organic') {
+    fillEllipse(ctx, ox + 7, oy + 7, 6, 5, p.rockDark);
+    fillEllipse(ctx, ox + 7, oy + 6, 4, 3, p.rock);
+    px(ctx, p.rockLight, ox + 4, oy + 3, 5, 1);
+    px(ctx, p.surfaceLight, ox + 10, oy + 10, 2, 1);
+    px(ctx, p.rockDeep, ox + 1, oy + 13, 13, 1);
   } else if (s.blocks === 'basalt') {
     px(ctx, p.rockDark, ox, oy + 7, T, 1);
     px(ctx, p.rockDark, ox + 5, oy, 1, 7);
@@ -265,8 +271,10 @@ export const DECO = {
   container: 19,
   alienTech: 20,
   wallPanel: 21,
+  membrane: 22,
+  organicRib: 23,
 } as const;
-export const DECO_FRAME_COUNT = 22;
+export const DECO_FRAME_COUNT = 24;
 
 function blade(ctx: Ctx, x: number, height: number, lean: number, base: string, tip: string): void {
   for (let i = 0; i < height; i++) {
@@ -435,6 +443,24 @@ export function decorationDrawer(p: BiomePalette, s: BiomeStyle) {
         px(ctx, '#fb6258', 3, 14, 2, 1);
         px(ctx, p.accent, 11, 14, 2, 1);
         break;
+      case 22:
+        fillEllipse(ctx, 8, 9, 6, 6, p.surfaceShadow);
+        fillEllipse(ctx, 8, 9, 4, 5, p.soilLight);
+        for (let vein = 0; vein < 4; vein++) {
+          px(ctx, p.vine, 4 + vein * 2, 5 + vein % 2, 1, 8);
+        }
+        px(ctx, p.glow, 6, 6, 3, 1);
+        px(ctx, p.rockLight, 3, 14, 10, 2);
+        break;
+      case 23:
+        for (let rib = 0; rib < 5; rib++) {
+          px(ctx, p.rock, 2 + rib, 14 - rib * 2, 2, 3);
+          px(ctx, p.rockLight, 2 + rib, 14 - rib * 2, 1, 2);
+          px(ctx, p.rock, 12 - rib, 14 - rib * 2, 2, 3);
+        }
+        px(ctx, p.vine, 7, 4, 2, 11);
+        px(ctx, p.glow, 7, 4, 2, 2);
+        break;
     }
     hardenAlpha(ctx, w, h);
     addOutline(ctx, w, h, p.outline);
@@ -594,6 +620,11 @@ export function farDrawer(p: BiomePalette, s: BiomeStyle): Draw {
       wrapped(w, x, (cx) => {
         if (s.far === 'conifers') {
           conifer(ctx, cx, ground + 2, height, p.treesFar, p.treesFarLight);
+        } else if (s.far === 'sporeGroves') {
+          px(ctx, p.treesFar, cx - 2, ground - height, 5, height + 2);
+          fillEllipse(ctx, cx, ground - height, 13, 6, p.treesFar);
+          fillEllipse(ctx, cx - 1, ground - height - 2, 10, 3, p.treesFarLight);
+          px(ctx, p.treesFarLight, cx + 1, ground - height + 8, 1, height - 10);
         } else if (s.far === 'stalagmites') {
           spike(ctx, cx, ground + 2, Math.floor(height * 0.8), 5, p.treesFar, p.treesFarLight);
           spike(ctx, cx + 7, 0, Math.floor(height * 0.5), 3, p.treesFar, p.treesFarLight, true);
@@ -611,6 +642,15 @@ export function nearDrawer(p: BiomePalette, s: BiomeStyle): Draw {
     for (const tx of [42, 150, 262]) {
       const width = 10 + Math.floor(rand() * 5);
       wrapped(w, tx, (cx) => {
+        if (s.near === 'tendrils') {
+          for (let height = 0; height < h; height++) {
+            const bend = Math.round(Math.sin(height / 24 + tx) * 9);
+            px(ctx, p.treesNear, cx + bend - 4, height, 8, 1);
+            px(ctx, p.treesNearLight, cx + bend + 2, height, 1, 1);
+            if (height % 38 === 0) fillEllipse(ctx, cx + bend - 6, height, 5, 3, p.treesNearLight);
+          }
+          return;
+        }
         if (s.near === 'pines') {
           conifer(ctx, cx, h + 4, 150, p.treesNear, p.treesNearLight);
           for (let k = 0; k < 150; k += 5) px(ctx, p.peak, cx - Math.floor(k * 0.28), h - 150 + k, 3, 1);

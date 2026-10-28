@@ -5,6 +5,7 @@
  * level when its chapter is unlocked and the previous level of the chapter is completed.
  */
 import type { LevelEntry, LevelResult, LevelManager } from './LevelManager';
+import { STANDARD_ACCESS, type AccessPolicy } from '../progression/accessPolicy';
 
 export type ChapterStatus = 'ready' | 'planned' | 'broken';
 
@@ -287,6 +288,7 @@ export class CampaignManager {
     private readonly levels: LevelManager,
     /** Story metadata from campaign.json (null when absent). */
     readonly meta: CampaignMeta | null = null,
+    private readonly access: AccessPolicy = STANDARD_ACCESS,
   ) {
     this.chapters = chapters;
     for (const chapter of chapters) {
@@ -333,12 +335,13 @@ export class CampaignManager {
 
   isChapterUnlocked(chapterId: string): boolean {
     const chapter = this.byId.get(chapterId);
-    return chapter?.status === 'ready' && chapter.unlock.every((id) => this.isChapterCompleted(id));
+    return chapter?.status === 'ready' && (this.access.freeLevels || chapter.unlock.every((id) => this.isChapterCompleted(id)));
   }
 
   isLevelUnlocked(levelId: string): boolean {
     const chapter = this.chapterOf(levelId);
     if (!chapter || !this.isChapterUnlocked(chapter.id)) return false;
+    if (this.access.freeLevels) return this.levels.get(levelId)?.validation.ok === true;
     const position = chapter.levels.indexOf(levelId);
     return position === 0 || this.levels.isCompleted(chapter.levels[position - 1]);
   }

@@ -17,6 +17,7 @@ import {
 } from '../config';
 import { Player, PlayerEvent } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { enemyActiveSignals } from '../enemies/EnemyCatalog';
 import { AbilitySystem } from '../abilities/AbilitySystem';
 import { CombatSystem } from '../combat/CombatSystem';
 import { Health, type Hit } from '../combat/damage';
@@ -196,9 +197,19 @@ export class PlatformerLevelScene extends Phaser.Scene {
       {
         damagePlayer: (hit) => this.damagePlayer(hit),
         enemyKilled: (enemy) => this.onEnemyKilled(enemy),
+        enemySignal: (id, active) => this.objects?.signals.set(id, active && this.player.isAlive && !this.storyFroze && !this.story?.pendingBlocking),
         bossEngaged: () => !this.encounter || (this.encounterStarted && !this.encounterDefeated && !this.story?.pendingBlocking && this.player.isAlive && this.inBossArena()),
         bossHazards: (_enemy, active) => {
           if (this.encounter) this.objects?.signals.set(this.encounter.signals.hazards, active && this.player.isAlive && !this.story?.pendingBlocking);
+        },
+        bossNodesActive: () => !!this.encounter?.vulnerableBy?.length && this.encounter.vulnerableBy.every((id) => this.objects?.signals.isOn(id)),
+        bossNodesReset: () => {
+          this.combat.clearBossSupport();
+          if (this.encounter?.vulnerableBy) this.objects?.resetSignals(this.encounter.vulnerableBy);
+        },
+        bossSupport: (enemy) => {
+          const support = [catalog.enemies.stalker, catalog.enemies['nexar-bat']].filter((definition): definition is NonNullable<typeof definition> => definition !== undefined);
+          this.combat.spawnQueenSupport(enemy, support);
         },
       },
       { chart, statusCatalog: statuses.effects },
@@ -210,7 +221,12 @@ export class PlatformerLevelScene extends Phaser.Scene {
     this.abilities = new AbilitySystem({ scene: this, player: this.player, input: this.controls, combat: this.combat, fx: this.fx }, profile.loadout());
     // Invalid object configuration throws here with every problem listed, instead of failing silently.
     this.objects = new LevelObjectManager(createDefaultRegistry(), { scene: this, player: this.player, fx: this.fx, damagePlayer: (hit) => this.damagePlayer(hit) });
-    this.objects.load(levelData.objects, { width: level.width, height: level.height, externalSignals: this.encounter ? Object.values(this.encounter.signals) : [] });
+    this.objects.load(levelData.objects, {
+      width: level.width,
+      height: level.height,
+      externalSignals: [...enemyActiveSignals(level.enemies.flatMap((placement) => catalog.enemies[placement.type] ? [catalog.enemies[placement.type]] : [])), ...(this.encounter ? Object.values(this.encounter.signals) : [])],
+    });
+    this.combat.syncEnemySignals();
     this.story = new StoryDirector(storyCheck.beats, touch);
     this.storyPanel = new StoryPanel(this);
     this.storyFroze = false;
@@ -243,8 +259,14 @@ export class PlatformerLevelScene extends Phaser.Scene {
     const cancelCharge = (): void => this.abilities.cancelAll();
     this.events.on(Phaser.Scenes.Events.PAUSE, cancelCharge);
     this.game.events.on(Phaser.Core.Events.BLUR, cancelCharge);
-    const pauseObjects = (): void => this.objects?.pause();
-    const resumeObjects = (): void => this.objects?.resume();
+    const pauseObjects = (): void => {
+      this.objects?.pause();
+      this.combat.syncEnemySignals(false);
+    };
+    const resumeObjects = (): void => {
+      this.objects?.resume();
+      this.combat.syncEnemySignals();
+    };
     this.events.on(Phaser.Scenes.Events.PAUSE, pauseObjects);
     this.events.on(Phaser.Scenes.Events.RESUME, resumeObjects);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -303,10 +325,16 @@ export class PlatformerLevelScene extends Phaser.Scene {
       this.storyFroze = blocking;
       if (blocking) {
         this.combat.suspendBosses();
+        this.combat.syncEnemySignals(false);
+        this.objects?.pause();
         this.physics.pause();
         this.player.body.setVelocity(0, 0);
         this.abilities.cancelAll();
-      } else if (!this.finished) this.physics.resume();
+      } else if (!this.finished) {
+        this.physics.resume();
+        this.objects?.resume();
+        this.combat.syncEnemySignals();
+      }
     }
     if (!blocking && this.player.isAlive) {
       const b = this.player.body;
@@ -417,6 +445,7 @@ export class PlatformerLevelScene extends Phaser.Scene {
   private onEnemyKilled(enemy: Enemy): void {
     this.abilities.energy.restore(enemy.def.reward.energy);
     if (this.encounter && enemy.def.id === this.encounter.enemy) {
+      this.combat.clearBossSupport();
       this.encounterDefeated = true;
       this.objects?.signals.set(this.encounter.signals.hazards, false);
       this.objects?.signals.set(this.encounter.signals.engaged, false);
@@ -474,6 +503,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
 
   private killPlayer(): void {
     if (!this.player.isAlive) return;
+    this.objects?.pause();
+    this.combat.syncEnemySignals(false);
     if (this.encounter && !this.encounterDefeated) {
       this.encounterStarted = false;
       this.frameBossArena(false);
@@ -493,6 +524,8 @@ export class PlatformerLevelScene extends Phaser.Scene {
         this.health.reset();
         this.bus.emit(LevelEvent.Health, this.health.current, this.health.max);
         this.player.respawnAt(this.respawn.x, this.respawn.y);
+        this.objects?.resume();
+        this.combat.syncEnemySignals();
         this.fx.land(this.player.visual.x, this.player.visual.y, 200);
       } else {
         this.finished = true;

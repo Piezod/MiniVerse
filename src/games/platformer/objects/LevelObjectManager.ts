@@ -8,6 +8,9 @@ export interface LevelObject<C extends LevelObjectConfig = LevelObjectConfig> {
   readonly config: C;
   /** Called every unpaused frame with the elapsed seconds. */
   update(dt: number): void;
+  pause?(): void;
+  resume?(): void;
+  reset?(): void;
   /** Releases everything the object created (sprites, bodies, colliders, listeners). Must be idempotent. */
   destroy(): void;
 }
@@ -105,11 +108,24 @@ export class LevelObjectManager<Host> {
   }
 
   pause(): void {
+    if (this.isPaused || this.destroyed) return;
     this.isPaused = true;
+    for (const object of this.objects) object.pause?.();
   }
 
   resume(): void {
+    if (!this.isPaused || this.destroyed) return;
     this.isPaused = false;
+    for (const object of this.objects) object.resume?.();
+  }
+
+  resetSignals(ids: readonly string[]): void {
+    if (this.destroyed) return;
+    const reset = new Set(ids);
+    for (const object of this.objects) {
+      if (object.config.id && reset.has(object.config.id)) object.reset?.();
+    }
+    for (const id of reset) this.signals.set(id, false);
   }
 
   update(dt: number): void {

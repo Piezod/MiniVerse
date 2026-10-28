@@ -40,15 +40,19 @@
     },
     {
       "id": "alien",
-      "name": "Planeta alienigena",
-      "description": "Un mundo vivo de flora luminosa y cuevas. La Reina espera en su guarida",
+      "name": "El planeta de las sombras",
+      "description": "Una red viva oculta a los cautivos. PIEZOD y LUMA siguen el rastro NÉXAR hasta la Reina del Enjambre",
       "order": 2,
-      "planned": true,
-      "plannedLevels": 4,
       "biome": "alien",
-      "levels": [],
+      "levels": ["c2-1-landing", "c2-2-caves", "c2-3-lab", "c2-4-queen"],
       "unlock": { "chapters": ["station"] },
-      "rewards": { "abilities": [] }
+      "rewards": { "abilities": [] },
+      "episodes": [
+        { "id": "c2-1-landing", "title": "Caída en territorio hostil", "summary": "Una selva bioluminiscente rodea los restos del aterrizaje y las primeras huellas humanas.", "variant": "jungle" },
+        { "id": "c2-2-caves", "title": "Las cavernas vivas", "summary": "Hongos, cristales y membranas conectan las defensas de las cavernas.", "variant": "caves" },
+        { "id": "c2-3-lab", "title": "El laboratorio de la colmena", "summary": "La tecnología NÉXAR invade el tejido vivo y oculta registros sobre los prisioneros.", "variant": "lab" },
+        { "id": "c2-4-queen", "title": "El corazón del Enjambre", "summary": "La Reina protege el nido y el secreto del traslado a la Forja de los cautivos.", "variant": "nest", "boss": "swarm-queen" }
+      ]
     }
   ]
 }

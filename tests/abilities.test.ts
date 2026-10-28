@@ -26,6 +26,7 @@ import { ABILITY_MODULE_IDS } from '../src/games/platformer/abilities/moduleIds'
 import { type AbilityButton, KEY_BINDINGS, SHORTCUT_KEYS, type PlatformerAction } from '../src/games/platformer/controls';
 import { memoryStorage } from '../src/games/platformer/level/LevelManager';
 import { Profile } from '../src/games/platformer/progression/Profile';
+import { PLATFORMER_ACCESS, STANDARD_ACCESS } from '../src/games/platformer/progression/accessPolicy';
 
 const catalog = buildAbilityCatalog(JSON.parse(readFileSync(join(__dirname, '../public/assets/platformer/abilities/abilities.json'), 'utf8')), ABILITY_MODULE_IDS);
 const DT = 1 / 60;
@@ -64,6 +65,93 @@ describe('keyboard controls', () => {
     );
     expect(bad.issues.map((i) => i.id)).toEqual(['a', 'b']);
     expect(bad.abilities.c.defaultSlot).toBeNull();
+  });
+});
+
+describe('free weapon access', () => {
+  it('offers every functional weapon at level one without purchases or completed levels', () => {
+    const profile = new Profile(catalog, memoryStorage(), PLATFORMER_ACCESS);
+    const weapons = Object.values(catalog.abilities).filter((def) => def.available && def.slot === 'active');
+    expect(weapons.map((def) => def.id)).toEqual(['beam', 'flamethrower', 'laser-cannon']);
+    for (const def of weapons) {
+      expect(profile.levelOf(def.id)).toBe(1);
+      for (const slot of ['primary', 'secondary'] as const) {
+        expect(profile.equipWeapon(def.id, slot)).toBe(true);
+        expect(profile.loadout().find((entry) => entry.button === slot)?.def.id).toBe(def.id);
+      }
+    }
+    expect(profile.snapshot().owned).toEqual({});
+    expect(profile.snapshot().collected).toEqual({});
+    expect(profile.balance).toBe(0);
+    expect(profile.levelOf('jetpack')).toBe(0);
+    expect(profile.equipWeapon('cryo-cannon', 'primary')).toBe(false);
+    expect(profile.equipWeapon('plasma-projector', 'secondary')).toBe(false);
+  });
+
+  it('persists chosen F/R slots without recording free access as ownership', () => {
+    const storage = memoryStorage();
+    const profile = new Profile(catalog, storage, PLATFORMER_ACCESS);
+    expect(profile.activeSlots).toEqual(['beam', 'flamethrower']);
+    profile.equipWeapon('laser-cannon', 'secondary');
+    profile.equipWeapon('flamethrower', 'primary');
+    const restored = new Profile(catalog, storage, PLATFORMER_ACCESS);
+    expect(restored.equippedOn('primary')).toBe('flamethrower');
+    expect(restored.equippedOn('secondary')).toBe('laser-cannon');
+    expect(restored.loadout().map((entry) => [entry.def.id, entry.level, entry.button])).toEqual([
+      ['flamethrower', 1, 'primary'], ['laser-cannon', 1, 'secondary'],
+    ]);
+    expect(restored.snapshot().owned).toEqual({});
+    expect(new Profile(catalog, storage, STANDARD_ACCESS).activeSlots).toEqual([]);
+  });
+
+  it('keeps deliberately empty slots empty between sessions', () => {
+    const storage = memoryStorage();
+    const profile = new Profile(catalog, storage, PLATFORMER_ACCESS);
+    profile.unequipWeapon('primary');
+    profile.unequipWeapon('secondary');
+    const restored = new Profile(catalog, storage, PLATFORMER_ACCESS);
+    expect(restored.activeSlots).toEqual([]);
+    expect(restored.levelOf('laser-cannon')).toBe(1);
+    expect(restored.equipWeapon('laser-cannon', 'secondary')).toBe(true);
+  });
+
+  it('preserves existing purchases, passive equipment, upgrades and wallet exactly', () => {
+    const storage = memoryStorage();
+    const original = new Profile(catalog, storage, STANDARD_ACCESS);
+    original.recordStars('forest-1', Array.from({ length: 100 }, (_, index) => String(index)));
+    original.purchase('beam', () => true);
+    original.purchase('beam', () => true);
+    original.purchase('jetpack', () => true);
+    const before = original.snapshot();
+    const saved = storage.load();
+    const free = new Profile(catalog, storage, PLATFORMER_ACCESS);
+    expect(free.snapshot()).toEqual(before);
+    expect(storage.load()).toBe(saved);
+    expect(free.balance).toBe(original.balance);
+    expect(free.levelOf('beam')).toBe(2);
+    expect(free.isEquipped('jetpack')).toBe(true);
+    expect(free.levelOf('flamethrower')).toBe(1);
+    free.equipWeapon('laser-cannon', 'secondary');
+    const restored = new Profile(catalog, storage, PLATFORMER_ACCESS);
+    expect(restored.loadout().map((entry) => [entry.def.id, entry.level])).toEqual([['jetpack', 1], ['beam', 2], ['laser-cannon', 1]]);
+    expect(restored.snapshot().owned).toEqual(before.owned);
+    expect(restored.collectedIn('forest-1')).toBe(100);
+  });
+
+  it('charges only actual upgrades and retains paid levels when standard access returns', () => {
+    const storage = memoryStorage();
+    const profile = new Profile(catalog, storage, PLATFORMER_ACCESS);
+    const cost = catalog.abilities['laser-cannon'].levels[1].cost;
+    expect(profile.canPurchase('laser-cannon', () => false)).toEqual({ ok: false, reason: 'funds', cost });
+    profile.recordStars('c1-3-reactor', Array.from({ length: cost + 2 }, (_, index) => String(index)));
+    profile.equipWeapon('laser-cannon', 'secondary');
+    expect(profile.purchase('laser-cannon', () => false)).toEqual({ ok: true, cost, nextLevel: 2 });
+    expect(profile.balance).toBe(2);
+    const standard = new Profile(catalog, storage, STANDARD_ACCESS);
+    expect(standard.levelOf('laser-cannon')).toBe(2);
+    expect(standard.levelOf('beam')).toBe(0);
+    expect(standard.equippedOn('secondary')).toBe('laser-cannon');
+    expect(standard.balance).toBe(2);
   });
 });
 

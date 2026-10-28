@@ -12,7 +12,7 @@ import { type LevelData } from '../src/games/platformer/level/LevelParser';
 import { clearSandboxLevels, getSandboxLevel, registerSandboxLevel } from '../src/games/platformer/level/sandboxLevels';
 import { validateLevel } from '../src/games/platformer/level/LevelValidator';
 import { createDefaultRegistry } from '../src/games/platformer/objects/builtin';
-import { type LevelObject, LevelObjectManager, ObjectConfigError, ObjectRegistry } from '../src/games/platformer/objects/LevelObjectManager';
+import { type LevelObject, type ObjectContext, LevelObjectManager, ObjectConfigError, ObjectRegistry } from '../src/games/platformer/objects/LevelObjectManager';
 import {
   boxesOverlap,
   doorShouldBeOpen,
@@ -22,7 +22,9 @@ import {
   SignalBus,
   SwitchModel,
 } from '../src/games/platformer/objects/models';
-import { OBJECT_TYPES, type DoorConfig, type LevelObjectConfig, type SwitchConfig } from '../src/games/platformer/objects/types';
+import { OBJECT_TYPES, type BoostPlantConfig, type DoorConfig, type LevelObjectConfig, type SwitchConfig } from '../src/games/platformer/objects/types';
+import type { SceneHost } from '../src/games/platformer/objects/sceneHost';
+import { removeObjectTextures } from '../src/games/platformer/objects/objectArt';
 import { validateObjects } from '../src/games/platformer/objects/validate';
 import { buildObjectsSandbox, OBJECTS_SANDBOX_ID } from '../src/games/platformer/sandbox/objectsLevel';
 
@@ -57,6 +59,35 @@ describe('validación de la configuración JSON', () => {
     expect(objects[2]).toMatchObject({ width: 3, damage: 1, mode: 'periodic' });
     expect(objects[3]).toMatchObject({ duration: 0 });
     expect(objects[4]).toMatchObject({ height: 3, opensWith: ['a'], inverted: false });
+  });
+
+  it('valida parámetros configurables del suelo tóxico', () => {
+    const result = validateObjects([{ type: 'toxicFloor', col: 5, row: 11 }], SIZE);
+    expect(result.ok).toBe(true);
+    expect(result.objects[0]).toMatchObject({ width: 3, damage: 1, interval: 1, mode: 'periodic', warning: 0.6 });
+    expect(errorsOf([{ type: 'toxicFloor', col: 5, row: 11, interval: 0 }])[0]).toMatch(/"interval"/);
+    expect(errorsOf([{ type: 'toxicFloor', col: 62, row: 11, width: 3 }])[0]).toMatch(/se sale del nivel/);
+  });
+
+  it('valida dirección y fuerza de la planta impulsora', () => {
+    const result = validateObjects([{ type: 'boostPlant', col: 3, row: 10, direction: 'up-right', force: 520 }], SIZE);
+    expect(result.ok).toBe(true);
+    expect(result.objects[0]).toMatchObject({ direction: 'up-right', force: 520 });
+    expect(errorsOf([{ type: 'boostPlant', col: 3, row: 10, force: 700 }])[0]).toMatch(/"force"/);
+    expect(errorsOf([{ type: 'boostPlant', col: 3, row: 10, direction: 'down' }])[0]).toMatch(/"direction"/);
+  });
+
+  it('valida nodos como señales y puertas membrane como puertas existentes', () => {
+    const result = validateObjects([
+      { type: 'organicNode', id: 'root', col: 1, row: 10, mode: 'toggle' },
+      { type: 'door', id: 'membrane', col: 8, row: 8, height: 3, opensWith: 'root', style: 'membrane' },
+      { type: 'laser', col: 20, row: 2, orientation: 'vertical', length: 3, enabledBy: 'root' },
+    ], SIZE);
+    expect(result.ok).toBe(true);
+    expect(result.objects[0]).toMatchObject({ type: 'organicNode', id: 'root', mode: 'toggle' });
+    expect(result.objects[1]).toMatchObject({ type: 'door', style: 'membrane', opensWith: ['root'] });
+    expect(errorsOf([{ type: 'organicNode', col: 1, row: 10 }])[0]).toMatch(/"id" es obligatorio/);
+    expect(errorsOf([{ type: 'organicNode', id: 'timed', col: 1, row: 10, mode: 'timed', duration: 0 }])[0]).toMatch(/"duration"/);
   });
 
   it('rechaza tipos desconocidos y campos mal escritos (nada falla en silencio)', () => {
@@ -578,6 +609,107 @@ describe('registro y gestor de objetos', () => {
     manager.update(-1);
     expect(platform.motion.pos).toBeCloseTo(4.8, 5);
   });
+
+  it('la planta impulsa una vez por contacto, se rearma al salir y limpia su sprite', () => {
+    const body = { x: 0, y: 8, width: 12, height: 12, velocity: { x: 0, y: 0 }, setVelocityX: vi.fn(), setVelocityY: vi.fn() };
+    const player = { body, isAlive: true };
+    const sprite = { setOrigin: vi.fn().mockReturnThis(), setDepth: vi.fn().mockReturnThis(), setTexture: vi.fn().mockReturnThis(), destroy: vi.fn() };
+    const scene = { textures: { exists: () => true }, add: { image: () => sprite }, sound: { mute: true } };
+    const fx = { jump: vi.fn() };
+    const config: BoostPlantConfig = { type: 'boostPlant', col: 0, row: 0, direction: 'up-left', force: 300 };
+    const context = { scene, player, fx, damagePlayer: vi.fn(), signals: new SignalBus() } as unknown as ObjectContext<SceneHost>;
+    const plant = createDefaultRegistry().create(config, context);
+
+    plant.update(0.016);
+    expect(body.setVelocityX).toHaveBeenCalledWith(-165);
+    expect(body.setVelocityY).toHaveBeenCalledWith(-300);
+    expect(fx.jump).toHaveBeenCalledOnce();
+    plant.update(0.016);
+    expect(body.setVelocityY).toHaveBeenCalledOnce();
+    body.x = 40;
+    plant.update(0.016);
+    body.x = 0;
+    plant.update(0.016);
+    expect(body.setVelocityY).toHaveBeenCalledTimes(2);
+    expect(fx.jump).toHaveBeenCalledTimes(2);
+    plant.destroy();
+    plant.destroy();
+    expect(sprite.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('el suelo tóxico daña con intervalo, respeta invulnerabilidad y limpia sus celdas', () => {
+    const body = { x: 0, y: 10, width: 12, height: 10 };
+    const player = { body, isAlive: true, isInvulnerable: false };
+    const cells = Array.from({ length: 2 }, () => ({ setOrigin: vi.fn().mockReturnThis(), setDepth: vi.fn().mockReturnThis(), setTexture: vi.fn(), destroy: vi.fn() }));
+    let cellIndex = 0;
+    const scene = { textures: { exists: () => true }, add: { image: () => cells[cellIndex++] }, sound: { mute: true } };
+    const damagePlayer = vi.fn();
+    const fx = { impact: vi.fn() };
+    const context = { scene, player, fx, damagePlayer, signals: new SignalBus() } as unknown as ObjectContext<SceneHost>;
+    const config = { type: 'toxicFloor', col: 0, row: 0, width: 2, damage: 1, interval: 0.5, mode: 'periodic', on: 2, off: 0.2, warning: 0.3, offset: 0 } as const;
+    const floor = createDefaultRegistry().create(config, context);
+
+    floor.update(0.21);
+    expect(damagePlayer).not.toHaveBeenCalled();
+    floor.update(0.3);
+    expect(damagePlayer).toHaveBeenCalledTimes(1);
+    expect(damagePlayer).toHaveBeenLastCalledWith({ amount: 1, form: 'area', element: 'plasma', fromX: 16 });
+    player.isInvulnerable = true;
+    floor.update(0.5);
+    expect(damagePlayer).toHaveBeenCalledTimes(1);
+    player.isInvulnerable = false;
+    floor.update(0.5);
+    expect(damagePlayer).toHaveBeenCalledTimes(2);
+    expect(fx.impact).toHaveBeenCalledTimes(3);
+    floor.destroy();
+    floor.destroy();
+    expect(cells.every((cell) => cell.destroy.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('el nodo orgánico conmuta una puerta membrane por contacto y limpia señal/collider al reiniciar', () => {
+    const makeSprite = () => ({
+      body: { enable: true, setAllowGravity: vi.fn(), setImmovable: vi.fn(), setSize: vi.fn().mockReturnThis(), setOffset: vi.fn() },
+      setOrigin: vi.fn().mockReturnThis(), setDepth: vi.fn().mockReturnThis(), setTexture: vi.fn().mockReturnThis(),
+      setVisible: vi.fn(), setAlpha: vi.fn(), destroy: vi.fn(),
+    });
+    const nodeSprite = makeSprite();
+    const doorSprite = makeSprite();
+    const collider = { destroy: vi.fn() };
+    const doorImage = vi.fn(() => doorSprite);
+    const player = { body: { x: 2, y: 2, width: 12, height: 12 }, isAlive: true };
+    const scene = {
+      textures: { exists: () => true }, add: { image: () => nodeSprite },
+      physics: { add: { image: doorImage, collider: () => collider } }, sound: { mute: true },
+    };
+    const fx = { checkpoint: vi.fn(), step: vi.fn() };
+    const context = { scene, player, fx, damagePlayer: vi.fn(), signals: new SignalBus() } as unknown as ObjectContext<SceneHost>;
+    const manager = new LevelObjectManager(createDefaultRegistry(), context);
+    manager.load([
+      { type: 'organicNode', id: 'root', col: 0, row: 0, mode: 'toggle' },
+      { type: 'door', id: 'wall', col: 4, row: 0, height: 2, opensWith: 'root', style: 'membrane' },
+    ], SIZE);
+
+    manager.update(0.016);
+    expect(manager.signals.isOn('root')).toBe(true);
+    expect(hazardEnabled({ enabledBy: 'root' }, manager.signals)).toBe(true);
+    expect(doorImage).toHaveBeenCalledWith(64, 0, 'platformer.obj.door.membrane.2');
+    expect(doorSprite.body.enable).toBe(false);
+    expect(doorSprite.setVisible).toHaveBeenLastCalledWith(false);
+    manager.update(0.016);
+    expect(fx.checkpoint).toHaveBeenCalledOnce();
+    player.body.x = 80;
+    manager.update(0.016);
+    player.body.x = 2;
+    manager.update(0.016);
+    expect(manager.signals.isOn('root')).toBe(false);
+    expect(hazardEnabled({ enabledBy: 'root' }, manager.signals)).toBe(false);
+    expect(doorSprite.body.enable).toBe(true);
+    manager.destroy();
+    expect(collider.destroy).toHaveBeenCalledOnce();
+    expect(nodeSprite.destroy).toHaveBeenCalledOnce();
+    expect(doorSprite.destroy).toHaveBeenCalledOnce();
+    expect(manager.signals.isOn('root')).toBe(false);
+  });
 });
 
 describe('pausa y reanudación', () => {
@@ -606,9 +738,48 @@ describe('pausa y reanudación', () => {
     manager.resume();
     expect(manager.paused).toBe(false);
   });
+
+  it('un respawn desde checkpoint reactiva el suelo tóxico con aviso y no hereda el pulso', () => {
+    const body = { x: 0, y: 10, width: 12, height: 10 };
+    const player = { body, isAlive: true, isInvulnerable: false };
+    const cell = { setOrigin: vi.fn().mockReturnThis(), setDepth: vi.fn().mockReturnThis(), setTexture: vi.fn(), destroy: vi.fn() };
+    const scene = { textures: { exists: () => true }, add: { image: () => cell }, sound: { mute: true } };
+    const damagePlayer = vi.fn();
+    const context = { scene, player, fx: { impact: vi.fn() }, damagePlayer, signals: new SignalBus() } as unknown as ObjectContext<SceneHost>;
+    const manager = new LevelObjectManager(createDefaultRegistry(), context);
+    manager.load([{ type: 'toxicFloor', col: 0, row: 0, width: 1, damage: 1, interval: 0.5, mode: 'permanent', warning: 0.4 }], SIZE);
+    manager.update(0.016);
+    expect(damagePlayer).toHaveBeenCalledOnce();
+
+    manager.pause();
+    player.isAlive = false;
+    manager.update(5);
+    expect(damagePlayer).toHaveBeenCalledOnce();
+    player.isAlive = true;
+    player.isInvulnerable = true;
+    manager.resume();
+    manager.update(0.2);
+    expect(damagePlayer).toHaveBeenCalledOnce();
+    manager.update(0.21);
+    expect(damagePlayer).toHaveBeenCalledOnce();
+    player.isInvulnerable = false;
+    for (let step = 0; step < 5; step++) manager.update(0.1);
+    expect(damagePlayer).toHaveBeenCalledTimes(2);
+    manager.destroy();
+    expect(cell.destroy).toHaveBeenCalledOnce();
+  });
 });
 
 describe('destrucción y reinicio', () => {
+  it('el unload elimina solo las texturas propiedad del registro de objetos', () => {
+    const remove = vi.fn();
+    removeObjectTextures({ textures: {
+      getTextureKeys: () => ['platformer.obj.toxic.on', 'platformer.obj.organic-node.on', 'platformer.enemy.walker'],
+      remove,
+    } } as unknown as Parameters<typeof removeObjectTextures>[0]);
+    expect(remove.mock.calls.map(([key]) => key)).toEqual(['platformer.obj.toxic.on', 'platformer.obj.organic-node.on']);
+  });
+
   it('destroy libera todo en orden inverso, limpia las señales y es idempotente', () => {
     const host: FakeHost = { log: [] };
     const manager = new LevelObjectManager(fakeRegistry(), host);

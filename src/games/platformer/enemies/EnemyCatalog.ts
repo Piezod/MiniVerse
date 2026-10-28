@@ -32,7 +32,7 @@ export interface EnemyAttack {
   recovery?: number;
   burstCount?: number;
   burstInterval?: number;
-  projectile?: 'fireball' | 'energy';
+  projectile?: 'fireball' | 'energy' | 'spore';
   /** Element of the attack; defaults to the enemy's element. */
   element: string | null;
 }
@@ -46,6 +46,8 @@ export interface EnemyDef {
   scale: number;
   /** Optional colour tint for variants (#rrggbb). */
   tint?: string;
+  /** Signal held on while at least one instance is alive in the level. */
+  activeSignal?: string;
   maxHealth: number;
   contactDamage: number;
   speed: number;
@@ -87,6 +89,10 @@ export interface CatalogIssue {
 export interface EnemyCatalog {
   enemies: Record<string, EnemyDef>;
   issues: CatalogIssue[];
+}
+
+export function enemyActiveSignals(enemies: readonly Pick<EnemyDef, 'activeSignal'>[]): string[] {
+  return [...new Set(enemies.flatMap((enemy) => enemy.activeSignal ? [enemy.activeSignal] : []))];
 }
 
 type RawEnemy = Record<string, unknown>;
@@ -151,6 +157,11 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
 
     const sprite = typeof r.sprite === 'string' ? r.sprite : '';
     if (!knownSprites.includes(sprite)) errors.push(`"sprite" debe ser uno de: ${knownSprites.join(', ')}`);
+    let activeSignal: string | undefined;
+    if (r.activeSignal !== undefined) {
+      if (typeof r.activeSignal !== 'string' || !/^[a-z][a-z0-9-]*$/.test(r.activeSignal)) errors.push('"activeSignal" debe ser un id en minusculas, numeros y guiones');
+      else activeSignal = r.activeSignal;
+    }
     const maxHealth = num('maxHealth', 0.1, 999);
     let element: string | null = null;
     if (typeof r.element === 'string' && isElement(r.element)) element = r.element;
@@ -208,11 +219,11 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
           burstCount: n('burstCount', 1, 3, 1),
           burstInterval: n('burstInterval', 0.1, 1, 0.25),
           element: typeof a.element === 'string' ? a.element : element,
-          projectile: a.projectile === 'energy' ? 'energy' : 'fireball',
+          projectile: a.projectile === 'energy' || a.projectile === 'spore' ? a.projectile : 'fireball',
         };
         if (!Number.isInteger(attack.burstCount)) errors.push('"attack.burstCount" debe ser entero');
         if (attack.burstCount! > 1 && kind !== 'shoot') errors.push('"attack.burstCount" solo se usa con shoot');
-        if (a.projectile !== undefined && !['fireball', 'energy'].includes(a.projectile as string)) errors.push('"attack.projectile" debe ser fireball o energy');
+        if (a.projectile !== undefined && !['fireball', 'energy', 'spore'].includes(a.projectile as string)) errors.push('"attack.projectile" debe ser fireball, energy o spore');
         if (typeof a.element === 'string' && !isElement(a.element)) errors.push(`"attack.element" desconocido: ${a.element}`);
       }
     }
@@ -240,6 +251,7 @@ export function buildEnemyCatalog(raw: unknown, knownSprites: readonly string[],
       sprite,
       scale: num('scale', 1, 4, 1),
       tint: typeof r.tint === 'string' && /^#[0-9a-f]{6}$/i.test(r.tint) ? r.tint : undefined,
+      activeSignal,
       maxHealth,
       contactDamage: num('contactDamage', 0, 10, 1),
       speed: num('speed', 0, 200, 30),

@@ -1,4 +1,4 @@
-import type { DoorConfig, ElectricFloorConfig, HazardTiming, LaserConfig, LevelDimensions, LevelObjectConfig, MovingPlatformConfig, ObjectIssue, SwitchConfig } from './types';
+import type { BoostPlantConfig, DoorConfig, ElectricFloorConfig, HazardTiming, LaserConfig, LevelDimensions, LevelObjectConfig, MovingPlatformConfig, ObjectIssue, OrganicNodeConfig, SwitchConfig, ToxicFloorConfig } from './types';
 import { OBJECT_TYPES } from './types';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -12,7 +12,10 @@ const ALLOWED: Record<(typeof OBJECT_TYPES)[number], readonly string[]> = {
   laser: [...COMMON, 'orientation', 'length', 'damage', ...TIMING],
   electricFloor: [...COMMON, 'width', 'damage', ...TIMING],
   switch: [...COMMON, 'duration'],
-  door: [...COMMON, 'height', 'opensWith', 'inverted'],
+  door: [...COMMON, 'height', 'opensWith', 'inverted', 'style'],
+  boostPlant: [...COMMON, 'direction', 'force'],
+  toxicFloor: [...COMMON, 'width', 'damage', 'interval', ...TIMING],
+  organicNode: [...COMMON, 'duration', 'mode'],
 };
 
 export interface ObjectValidation {
@@ -176,8 +179,51 @@ export function validateObjects(raw: unknown, size: LevelDimensions): ObjectVali
         let opensWith: string[] = [];
         if (!Array.isArray(list) || list.length === 0 || list.some((s) => typeof s !== 'string' || !ID.test(s))) errors.push('"opensWith" es obligatorio: un id de interruptor o una lista de ids');
         else opensWith = [...new Set(list as string[])];
-        const c: DoorConfig = { type: 'door', ...(id ? { id } : {}), col, row, height: num('height', 1, 8, 3, true), opensWith, inverted: flag('inverted', false) };
+        const c: DoorConfig = { type: 'door', ...(id ? { id } : {}), col, row, height: num('height', 1, 8, 3, true), opensWith, inverted: flag('inverted', false), style: oneOf('style', ['metal', 'membrane'] as const, 'metal') };
         if (row + c.height > size.height) errors.push('la puerta se sale del nivel por abajo');
+        config = c;
+        break;
+      }
+      case 'boostPlant': {
+        const c: BoostPlantConfig = {
+          type: 'boostPlant',
+          ...(id ? { id } : {}),
+          col,
+          row,
+          direction: oneOf('direction', ['up', 'up-left', 'up-right'] as const, 'up'),
+          force: num('force', 160, 520, 320),
+        };
+        config = c;
+        break;
+      }
+      case 'toxicFloor': {
+        const c: ToxicFloorConfig = {
+          type: 'toxicFloor',
+          ...(id ? { id } : {}),
+          col,
+          row,
+          width: num('width', 1, 20, 3, true),
+          damage: num('damage', 0.5, 3, 1),
+          interval: num('interval', 0.4, 3, 1),
+          ...timing(),
+          ...gate(),
+        };
+        if (col + c.width > size.width) errors.push('la superficie toxica se sale del nivel');
+        config = c;
+        break;
+      }
+      case 'organicNode': {
+        const c: OrganicNodeConfig = {
+          type: 'organicNode',
+          id: id ?? '',
+          col,
+          row,
+          mode: oneOf('mode', ['toggle', 'timed'] as const, 'toggle'),
+          duration: num('duration', 0, 120, 0),
+        };
+        if (id === undefined) errors.push('"id" es obligatorio en los nodos orgánicos');
+        if (c.mode === 'toggle' && c.duration !== 0) errors.push('"duration" debe ser 0 en modo toggle');
+        if (c.mode === 'timed' && c.duration <= 0) errors.push('"duration" debe ser mayor que 0 en modo timed');
         config = c;
         break;
       }
@@ -188,7 +234,7 @@ export function validateObjects(raw: unknown, size: LevelDimensions): ObjectVali
   });
 
   // References are checked once every id is known.
-  const switches = new Set(parsed.filter((p) => p.config.type === 'switch').map((p) => (p.config as SwitchConfig).id));
+  const switches = new Set(parsed.filter((p) => p.config.type === 'switch' || p.config.type === 'organicNode').map((p) => p.config.id!));
   for (const signal of size.externalSignals ?? []) {
     if (!ID.test(signal) || ids.has(signal)) issues.push({ severity: 'error', index: -1, message: `señal externa inválida o duplicada: ${signal}` });
     switches.add(signal);
@@ -212,7 +258,7 @@ export function validateObjects(raw: unknown, size: LevelDimensions): ObjectVali
     if (missing.length === 0) valid.push(entry);
   }
   for (const { config, index } of valid) {
-    if (config.type === 'switch' && !used.has(config.id)) issues.push({ severity: 'warning', index, message: `switch "${config.id}": ningún objeto lo usa` });
+    if ((config.type === 'switch' || config.type === 'organicNode') && !used.has(config.id)) issues.push({ severity: 'warning', index, message: `switch "${config.id}": ningún objeto lo usa` });
   }
 
   const ok = !issues.some((i) => i.severity === 'error');

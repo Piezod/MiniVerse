@@ -52,6 +52,7 @@ import { ENEMY_ANIMS } from '../src/games/platformer/assets/enemySprites';
 import { hoverPatrol, leashedChase } from '../src/games/platformer/enemies/flight';
 import { EnergyPool } from '../src/games/platformer/combat/resources';
 import { CombatSystem } from '../src/games/platformer/combat/CombatSystem';
+import { TEX } from '../src/games/platformer/assets/manifest';
 
 const assets = join(__dirname, '../public/assets/platformer');
 const json = (file: string): unknown => JSON.parse(readFileSync(join(assets, file), 'utf8'));
@@ -62,6 +63,9 @@ function setup(id = 'auto-turret', targetX = 40) {
   const timers: Array<{ remove: ReturnType<typeof vi.fn>; callback: () => void }> = [];
   const tweens: Array<{ stop: ReturnType<typeof vi.fn>; onComplete: () => void }> = [];
   const bars: Array<{ destroy: ReturnType<typeof vi.fn> }> = [];
+  const bossNodesActive = vi.fn(() => false);
+  const bossNodesReset = vi.fn();
+  const bossSupport = vi.fn();
   const scene = {
     add: { existing: vi.fn(), graphics: () => {
       const bar = { destroy: vi.fn(), clear: vi.fn(), setDepth: () => bar, setScrollFactor: () => bar, fillStyle: () => bar, fillRect: () => bar };
@@ -84,13 +88,232 @@ function setup(id = 'auto-turret', targetX = 40) {
     chart: catalogs.chart, statusCatalog: catalogs.statuses.effects,
     terrain: { getTileAtWorldXY: () => ({ collideUp: true }) } as unknown as EnemyHost['terrain'],
     target: () => target, enemyShoot: vi.fn(), enemyDied: vi.fn(),
-    bossEngaged: vi.fn(() => target.alive), bossHazards: vi.fn(), clearBossShots: vi.fn(),
+    bossEngaged: vi.fn(() => target.alive), bossHazards: vi.fn(), bossNodesActive, bossNodesReset, bossSupport, clearBossShots: vi.fn(),
   };
   const enemy = new Enemy(scene as unknown as ConstructorParameters<typeof Enemy>[0], 100, 100, catalogs.enemies.enemies[id], host);
-  return { enemy, host, target, timers, tweens, bars, scene };
+  return { enemy, host, target, timers, tweens, bars, scene, bossNodesActive, bossNodesReset, bossSupport };
 }
 
-describe('Enemy: torreta y guardian en el motor existente', () => {
+describe('Enemy: catálogo y comportamientos compartidos', () => {
+  it('la Reina usa la barra/daño comunes, bloquea sin nodos y limpia fase/apoyos al morir', () => {
+    expect(catalogs.enemies.issues).toEqual([]);
+    const { enemy, host, bossNodesActive, bossNodesReset, bossSupport } = setup('swarm-queen');
+    expect(enemy.def).toMatchObject({ boss: true, healthBar: true, maxHealth: 32, sprite: 'swarm-queen' });
+    expect(enemy.swarmQueen).not.toBeNull();
+    expect(enemy.applyHit({ amount: 1, form: 'projectile', element: 'energy' })).toMatchObject({ damage: 0, immune: true });
+
+    enemy.update(0, 100);
+    for (let frame = 0; frame < 14; frame++) enemy.update(0, 100);
+    expect(enemy.swarmQueen?.state).toBe('telegraph');
+    for (let frame = 0; frame < 11; frame++) enemy.update(0, 100);
+    expect(host.enemyShoot).toHaveBeenCalled();
+    for (let frame = 0; frame < 3; frame++) enemy.update(0, 100);
+    expect(enemy.swarmQueenVulnerable).toBe(true);
+    enemy.applyHit({ amount: 10, form: 'projectile', element: 'energy' });
+    expect(enemy.health.fraction).toBeCloseTo(22 / 32);
+    expect(enemy.swarmQueen?.phase).toBe(2);
+    expect(enemy.swarmQueenProtected).toBe(true);
+    expect(enemy.applyHit({ amount: 2, form: 'projectile', element: 'energy' })).toMatchObject({ damage: 0, immune: true });
+    expect(enemy.health.current).toBe(22);
+    expect(bossNodesReset).toHaveBeenCalled();
+    for (let frame = 0; frame < 800 && bossSupport.mock.calls.length < 2; frame++) enemy.update(0, 100);
+    expect(bossSupport).toHaveBeenCalledTimes(2);
+    bossNodesActive.mockReturnValue(true);
+    for (let frame = 0; frame < 600 && !enemy.swarmQueenVulnerable; frame++) enemy.update(0, 100);
+    expect(enemy.swarmQueenVulnerable).toBe(true);
+    bossNodesActive.mockReturnValue(false);
+    enemy.applyHit({ amount: 12, form: 'projectile', element: 'energy' });
+    expect(enemy.swarmQueen?.phase).toBe(3);
+    expect(enemy.swarmQueenProtected).toBe(true);
+    expect(enemy.applyHit({ amount: 2, form: 'projectile', element: 'energy' })).toMatchObject({ damage: 0, immune: true });
+    for (let frame = 0; frame < 1000 && bossSupport.mock.calls.length < 4; frame++) enemy.update(0, 100);
+    expect(bossSupport).toHaveBeenCalledTimes(4);
+    bossNodesActive.mockReturnValue(true);
+    for (let frame = 0; frame < 600 && !enemy.swarmQueenVulnerable; frame++) enemy.update(0, 100);
+    expect(enemy.swarmQueenVulnerable).toBe(true);
+    enemy.applyHit({ amount: 99, form: 'projectile', element: 'energy' });
+    expect(enemy.isAlive).toBe(false);
+    expect(enemy.swarmQueen?.state).toBe('dead');
+    expect(host.bossHazards).toHaveBeenLastCalledWith(enemy, false);
+    expect(host.clearBossShots).toHaveBeenCalledWith(enemy);
+    expect(bossNodesReset).toHaveBeenCalledTimes(3);
+  });
+
+  it('el checkpoint reinicia salud/fase de la Reina y restablece nodos y apoyos', () => {
+    const { enemy, host, bossNodesReset } = setup('swarm-queen');
+    enemy.applyHit({ amount: 10, form: 'projectile', element: 'energy' });
+    enemy.x = 150;
+    enemy.suspendBoss(true);
+    expect(enemy.health.current).toBe(32);
+    expect(enemy.swarmQueen).toMatchObject({ phase: 1, state: 'dormant' });
+    expect(enemy.x).toBe(100);
+    expect(bossNodesReset).toHaveBeenCalledOnce();
+    expect(host.bossHazards).toHaveBeenLastCalledWith(enemy, false);
+    expect(host.clearBossShots).toHaveBeenCalledWith(enemy);
+  });
+
+  it('limita el apoyo de Reina a cuatro enemigos vivos y lo limpia al suspender', () => {
+    const support: Array<{ active: boolean; isAlive: boolean; kill: ReturnType<typeof vi.fn>; once: ReturnType<typeof vi.fn> }> = [];
+    const spawnEnemy = vi.fn(() => {
+      const enemy = { active: true, isAlive: true, kill: vi.fn(), once: vi.fn() };
+      support.push(enemy);
+      return enemy;
+    });
+    const combat = Object.assign(Object.create(CombatSystem.prototype) as object, { supportEnemies: new Set(), spawnEnemy }) as unknown as CombatSystem;
+    const queen = { x: 100, y: 80 } as Enemy;
+    for (let count = 0; count < 8; count++) combat.spawnQueenSupport(queen, [catalogs.enemies.enemies.stalker, catalogs.enemies.enemies['nexar-bat']]);
+    expect(spawnEnemy).toHaveBeenCalledTimes(4);
+    combat.clearBossSupport();
+    expect(support.every((enemy) => enemy.kill.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('el Acechador detecta, anticipa y carga; queda expuesto al fallar y limpia al morir', () => {
+    const { enemy, host, target } = setup('stalker', 65);
+    expect(enemy.def).toMatchObject({ movement: 'chase', detectRange: 124, sprite: 'stalker' });
+    enemy.update(0, 16);
+    expect(enemy.aiState).toBe('attack');
+    expect(enemy.body.velocity.x).toBe(0);
+    expect(enemy.def.attack?.telegraph).toBe(0.75);
+    target.x = 135;
+    enemy.update(0, 750);
+    expect(enemy.body.velocity.x).toBe(-176);
+    enemy.update(0, 400);
+    expect(enemy.aiState).toBe('recover');
+    expect(enemy.applyHit({ amount: 1, form: 'projectile', element: 'fire', fromX: 40 }).damage).toBeGreaterThan(0);
+    enemy.applyHit({ amount: 99, form: 'projectile', element: 'energy', fromX: 40 });
+    expect(enemy.isAlive).toBe(false);
+    expect(enemy.body.enable).toBe(false);
+    expect(host.enemyDied).toHaveBeenCalledOnce();
+    expect(host.clearBossShots).toHaveBeenCalledWith(enemy);
+  });
+
+  it('el Escupidor avisa, lanza tres esporas y descansa antes de volver a atacar', () => {
+    const { enemy, host } = setup('spore-spitter');
+    expect(enemy.def).toMatchObject({ movement: 'stationary', fixedFacing: true, sprite: 'spore-spitter' });
+    expect(enemy.def.attack).toMatchObject({ projectile: 'spore', element: 'plasma', burstCount: 3, burstInterval: 0.25, recovery: 1.25 });
+    enemy.update(0, 16);
+    expect(enemy.aiState).toBe('attack');
+    expect(host.enemyShoot).not.toHaveBeenCalled();
+    enemy.update(0, 780);
+    expect(host.enemyShoot).not.toHaveBeenCalled();
+    enemy.update(0, 5);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(1);
+    enemy.update(0, 250);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(2);
+    enemy.update(0, 250);
+    expect(host.enemyShoot).toHaveBeenCalledTimes(3);
+    enemy.update(0, 1);
+    expect(enemy.aiState).toBe('recover');
+    expect(enemy.body.immovable).toBe(true);
+    enemy.applyHit({ amount: 99, form: 'projectile', element: 'energy' });
+    expect(enemy.isAlive).toBe(false);
+    expect(host.enemyDied).toHaveBeenCalledOnce();
+    expect(host.clearBossShots).toHaveBeenCalledWith(enemy);
+  });
+
+  it('CombatSystem crea el proyectil de espora con arte y animacion propios', () => {
+    const { enemy } = setup('spore-spitter');
+    const projectile = {
+      body: { setSize: vi.fn() },
+      setDepth: vi.fn().mockReturnThis(), setData: vi.fn().mockReturnThis(),
+      play: vi.fn(), setVelocity: vi.fn(),
+    };
+    const create = vi.fn(() => projectile);
+    const combat = Object.assign(Object.create(CombatSystem.prototype) as object, {
+      enemyShots: { create }, scene: { sound: { mute: true } },
+    }) as unknown as CombatSystem;
+    combat.enemyShoot(enemy, -96, 0, 1);
+    expect(create).toHaveBeenCalledWith(94, 88, TEX.spore, 0);
+    expect(projectile.play).toHaveBeenCalledWith('platformer.projectile.spore');
+    expect(projectile.body.setSize).toHaveBeenCalledWith(6, 6);
+    expect(projectile.setVelocity).toHaveBeenCalledWith(-96, 0);
+    expect(projectile.setData).toHaveBeenCalledWith('element', 'plasma');
+  });
+
+  it('el Murcielago NEXAR patrulla acotado y fija el objetivo antes de picar', () => {
+    const patrol = setup('nexar-bat', 900);
+    expect(patrol.enemy.body.allowGravity).toBe(false);
+    patrol.enemy.update(0, 16);
+    expect(patrol.enemy.aiState).toBe('patrol');
+    patrol.enemy.x = 130;
+    patrol.enemy.update(0, 16);
+    expect(patrol.enemy.body.velocity.x).toBe(-32);
+
+    const dive = setup('nexar-bat', 65);
+    expect(dive.enemy.def).toMatchObject({ movement: 'hover', sprite: 'nexar-bat', patrol: { range: 28, leash: 32, standoff: 72 } });
+    dive.enemy.update(0, 16);
+    expect(dive.enemy.aiState).toBe('attack');
+    expect(dive.enemy.body.velocity.x).toBe(0);
+    dive.target.x = 135;
+    dive.enemy.update(0, 700);
+    expect(Math.hypot(dive.enemy.body.velocity.x, dive.enemy.body.velocity.y)).toBeCloseTo(148);
+    expect(dive.enemy.body.velocity.x).toBeLessThan(0);
+    dive.enemy.update(0, 400);
+    expect(dive.enemy.aiState).toBe('recover');
+    dive.enemy.applyHit({ amount: 99, form: 'projectile', element: 'fire' });
+    expect(dive.enemy.isAlive).toBe(false);
+    expect(dive.host.enemyDied).toHaveBeenCalledOnce();
+    expect(dive.host.clearBossShots).toHaveBeenCalledWith(dive.enemy);
+  });
+
+  it('el Guardian organico hereda la carga y protege el frente dejando vulnerable el flanco', () => {
+    const { enemy, host } = setup('organic-guardian', 65);
+    expect(enemy.def).toMatchObject({ sprite: 'organic-guardian', guard: 0, attack: { kind: 'lunge', power: 184, recovery: 1.45 } });
+    expect(enemy.applyHit({ amount: 1, form: 'projectile', element: 'fire', fromX: 40 })).toMatchObject({ damage: 0, immune: true });
+    enemy.update(0, 16);
+    expect(enemy.aiState).toBe('attack');
+    enemy.update(0, 950);
+    expect(enemy.body.velocity.x).toBe(-184);
+    enemy.update(0, 400);
+    expect(enemy.aiState).toBe('recover');
+    expect(enemy.applyHit({ amount: 1, form: 'projectile', element: 'fire', fromX: 40 })).toMatchObject({ damage: 0, immune: true });
+    expect(enemy.applyHit({ amount: 1, form: 'projectile', element: 'fire', fromX: 160 }).damage).toBeGreaterThan(0);
+    enemy.applyHit({ amount: 99, form: 'projectile', element: 'fire', fromX: 160 });
+    expect(enemy.isAlive).toBe(false);
+    expect(host.enemyDied).toHaveBeenCalledOnce();
+    expect(host.clearBossShots).toHaveBeenCalledWith(enemy);
+  });
+
+  it('mantiene activa la senal bio-hive mientras quede un tecnico y la sincroniza al pausar', () => {
+    const first = { def: catalogs.enemies.enemies['bio-technician'], isAlive: true, x: 20, y: 30, displayHeight: 24 };
+    const second = { def: catalogs.enemies.enemies['bio-technician'], isAlive: true, x: 40, y: 30, displayHeight: 24 };
+    const enemySignal = vi.fn();
+    const combat = Object.assign(Object.create(CombatSystem.prototype) as object, {
+      enemies: { getChildren: () => [first, second] }, callbacks: { enemySignal, enemyKilled: vi.fn() },
+      fx: { enemyDefeated: vi.fn() },
+    }) as unknown as CombatSystem;
+    combat.syncEnemySignals();
+    expect(enemySignal).toHaveBeenLastCalledWith('bio-hive', true);
+    combat.syncEnemySignals(false);
+    expect(enemySignal).toHaveBeenLastCalledWith('bio-hive', false);
+    combat.syncEnemySignals();
+    first.isAlive = false;
+    combat.enemyDied(first as Enemy);
+    expect(enemySignal).toHaveBeenLastCalledWith('bio-hive', true);
+    second.isAlive = false;
+    combat.enemyDied(second as Enemy);
+    expect(enemySignal).toHaveBeenLastCalledWith('bio-hive', false);
+  });
+
+  it('el Tecnico biologico avisa, ataca con esporas y limpia su vida al morir', () => {
+    const { enemy, host } = setup('bio-technician');
+    expect(enemy.def).toMatchObject({ activeSignal: 'bio-hive', sprite: 'bio-technician', element: 'plasma' });
+    enemy.update(0, 16);
+    expect(enemy.aiState).toBe('attack');
+    expect(host.enemyShoot).not.toHaveBeenCalled();
+    enemy.update(0, 1090);
+    const [, velocityX, velocityY, damage] = vi.mocked(host.enemyShoot).mock.calls[0];
+    expect(velocityX).toBe(-88);
+    expect(velocityY).toBeCloseTo(0);
+    expect(damage).toBe(1);
+    enemy.update(0, 500);
+    expect(enemy.aiState).toBe('recover');
+    enemy.applyHit({ amount: 99, form: 'projectile', element: 'energy', fromX: 40 });
+    expect(enemy.isAlive).toBe(false);
+    expect(host.enemyDied).toHaveBeenCalledOnce();
+    expect(host.clearBossShots).toHaveBeenCalledWith(enemy);
+  });
+
   it('el cierre tolera grupos ya destruidos por Phaser sin eventos huérfanos', () => {
     const combat = Object.assign(Object.create(CombatSystem.prototype) as object, {
       enemies: { scene: undefined, getChildren: () => { throw new Error('Destroyed group'); } },

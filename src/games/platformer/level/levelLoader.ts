@@ -5,6 +5,7 @@ import { buildCampaign, CampaignManager } from './CampaignManager';
 import { type LevelEntry, LevelManager, localProgressStorage } from './LevelManager';
 import { clearSandboxLevels } from './sandboxLevels';
 import { validateLevel } from './LevelValidator';
+import { PLATFORMER_ACCESS } from '../progression/accessPolicy';
 
 /** Campaign definition: public/assets/platformer/levels/levels.json lists level files in order. */
 const LEVELS_PATH = 'assets/platformer/levels/';
@@ -15,6 +16,7 @@ const levelKey = (file: string): string => `platformer.level.${file}`;
 
 interface LevelRegistry {
   levels: string[];
+  plannedLevels?: string[];
 }
 
 let manager: LevelManager | null = null;
@@ -23,7 +25,7 @@ let campaign: CampaignManager | null = null;
 export function queueLevels(scene: Phaser.Scene): void {
   scene.load.json(CAMPAIGN_KEY, CAMPAIGN_URL);
   scene.load.once(`filecomplete-json-${REGISTRY_KEY}`, (_key: string, _type: string, registry: LevelRegistry) => {
-    for (const file of registry.levels ?? []) scene.load.json(levelKey(file), LEVELS_PATH + file);
+    for (const file of [...(registry.levels ?? []), ...(registry.plannedLevels ?? [])]) scene.load.json(levelKey(file), LEVELS_PATH + file);
   });
   scene.load.json(REGISTRY_KEY, LEVELS_PATH + 'levels.json');
 }
@@ -71,7 +73,7 @@ export function buildCampaignManager(
   const levels = getLevelManager();
   const { chapters, issues, meta } = buildCampaign(scene.cache.json.get(CAMPAIGN_KEY), { levels: levels.levels, biomes: Object.keys(BIOMES), variants: BIOME_VARIANTS, abilities, enemies });
   for (const issue of issues) console.error(`[campaign] ${issue.chapter}: ${issue.message}`);
-  campaign = new CampaignManager(chapters, levels, meta);
+  campaign = new CampaignManager(chapters, levels, meta, PLATFORMER_ACCESS);
   return campaign;
 }
 
@@ -82,7 +84,7 @@ export function getCampaign(): CampaignManager {
 
 export function releaseLevels(game: Phaser.Game): void {
   const registry = game.cache.json.get(REGISTRY_KEY) as LevelRegistry | undefined;
-  for (const file of registry?.levels ?? []) game.cache.json.remove(levelKey(file));
+  for (const file of [...(registry?.levels ?? []), ...(registry?.plannedLevels ?? [])]) game.cache.json.remove(levelKey(file));
   game.cache.json.remove(REGISTRY_KEY);
   game.cache.json.remove(CAMPAIGN_KEY);
   manager = null;

@@ -1,0 +1,134 @@
+{
+  "id": "c2-2-caves",
+  "name": "Las cavernas vivas",
+  "biome": "alien",
+  "variant": "caves",
+  "height": 16,
+  "sections": [
+    {
+      "name": "Boca de la caverna",
+      "rows": [
+        "...S.............====.............",
+        "..................========..........",
+        "......====.........................",
+        "................................",
+        ".....XXXXX.......................",
+        "P.....A.............F.............S",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Bosque de cristales",
+      "rows": [
+        ".................====............S",
+        ".................========...........",
+        "..====............................",
+        "................................",
+        ".............XXXXX...............",
+        "K.S.F........C..............A......",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Galería superior",
+      "rows": [
+        "S.............................S",
+        "==========.............==========",
+        "...........====...................",
+        "...................XXXXX..........",
+        "...XXXXX..........................",
+        "..F...........A.............C......S",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Guardia del paso estrecho",
+      "rows": [
+        ".....S...........====...............",
+        "..................========............",
+        "..........====.......................",
+        "................................",
+        ".................XXXXX.............",
+        "...G....F........A.............C...S",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Refugio bajo el hongo",
+      "rows": [
+        "....S..............====...........",
+        "...................========..........",
+        ".......====.......................",
+        "................................",
+        "..XXXXX.........................",
+        "K.............S.............F....A...",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Nudo de raíces",
+      "rows": [
+        "....S............====.............",
+        ".................========............",
+        "......====..........................",
+        "................................",
+        "...........XXXXX...................",
+        "...B......G.............C.......F....",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Cámara de las esporas",
+      "rows": [
+        ".....S...........====............S",
+        "..................========..........",
+        "........====........................",
+        "................................",
+        "....XXXXX.........................",
+        "K...A......F........C........G.....S",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Túnel hacia la colmena",
+      "rows": [
+        ".....S...........====..............",
+        "..................========...........",
+        "....====.............................",
+        "................................",
+        ".............XXXXX...............",
+        "..F......A...........B...........O",
+        "########################################",
+        "########################################"
+      ]
+    }
+  ],
+  "enemies": { "A": "stalker", "B": "bio-technician", "C": "spore-spitter", "F": "nexar-bat", "G": "organic-guardian" },
+  "objects": [
+    { "type": "movingPlatform", "col": 23, "row": 9, "width": 4, "axis": "y", "travel": -4, "speed": 32, "wait": 0.8 },
+    { "type": "toxicFloor", "col": 52, "row": 13, "width": 5, "damage": 1, "interval": 0.9, "mode": "periodic", "on": 1.4, "off": 1.6, "warning": 0.8 },
+    { "type": "boostPlant", "col": 70, "row": 13, "direction": "up-right", "force": 360 },
+    { "type": "movingPlatform", "col": 103, "row": 8, "width": 4, "axis": "x", "travel": -5, "speed": 34, "wait": 0.7 },
+    { "type": "organicNode", "id": "cave-root", "col": 213, "row": 13, "mode": "toggle" },
+    { "type": "toxicFloor", "col": 208, "row": 13, "width": 4, "damage": 1, "interval": 0.9, "mode": "periodic", "on": 1.4, "off": 1.6, "warning": 0.8, "enabledBy": "bio-hive" },
+    { "type": "toxicFloor", "col": 224, "row": 13, "width": 5, "damage": 1, "interval": 0.8, "mode": "periodic", "on": 1.5, "off": 1.5, "warning": 0.8, "disabledBy": "cave-root" },
+    { "type": "door", "id": "cave-membrane", "col": 238, "row": 10, "height": 4, "opensWith": "cave-root", "style": "membrane" },
+    { "type": "movingPlatform", "col": 266, "row": 9, "width": 4, "axis": "y", "travel": -4, "speed": 32, "wait": 0.8 }
+  ],
+  "story": {
+    "beats": [
+      { "id": "caves-descent", "trigger": { "type": "start" }, "lines": [{ "speaker": "luma", "text": "La señal desciende bajo la selva. Las paredes de esta caverna comparten una misma red orgánica." }] },
+      { "id": "crystal-route", "trigger": { "type": "zone", "col": 82, "row": 11, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "Detecto un eco por arriba. Esa cornisa no es el camino directo; puede guardar algo útil." }] },
+      { "id": "guardian-flank", "trigger": { "type": "zone", "col": 132, "row": 11, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "El guardián bloquea los golpes frontales. Haz que cargue, esquiva y busca su espalda al recuperarse." }] },
+      { "id": "cave-root-hint", "trigger": { "type": "zone", "col": 205, "row": 11, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "El nodo local corta la toxina y abre la membrana. La señal debe llegar antes de cruzar." }] },
+      { "id": "caves-exit", "trigger": { "type": "zone", "col": 300, "row": 11, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "La ruta conduce a una instalación enterrada. La colmena termina donde empieza la arquitectura NÉXAR." }] }
+    ]
+  }
+}

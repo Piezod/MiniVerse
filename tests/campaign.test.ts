@@ -15,6 +15,7 @@ import { type LevelData } from '../src/games/platformer/level/LevelParser';
 import { validateLevel } from '../src/games/platformer/level/LevelValidator';
 import { buildCatalogs } from '../src/games/platformer/progression/gameData';
 import { Profile } from '../src/games/platformer/progression/Profile';
+import { PLATFORMER_ACCESS, STANDARD_ACCESS, type AccessPolicy } from '../src/games/platformer/progression/accessPolicy';
 
 const ROOT = join(__dirname, '..');
 const ASSETS = join(ROOT, 'public/assets/platformer');
@@ -52,6 +53,74 @@ const chapterJson = (over: Record<string, unknown>) => ({ id: 'c', name: 'C', or
 const build = (chapters: unknown[], ids = ['a', 'b', 'c', 'd']) =>
   buildCampaign({ chapters }, { levels: fakeLevels(ids), biomes: BIOME_IDS, abilities: catalogs.abilities.abilities });
 
+describe('free selection of published episodes', () => {
+  const create = (storage = memoryStorage(), access: AccessPolicy = PLATFORMER_ACCESS) => {
+    const real = realCampaign(storage);
+    return { ...real, campaign: new CampaignManager(real.chapters, real.levels, null, access) };
+  };
+
+  it('lists all twelve published levels as directly selectable on a fresh save', () => {
+    const storage = memoryStorage();
+    const { campaign, levels } = create(storage);
+    const expected = ['forest-1', 'ruins-1', 'ice-1', 'volcano-1', 'c1-1-hangar', 'c1-2-corridors', 'c1-3-reactor', 'c1-4-omega', 'c2-1-landing', 'c2-2-caves', 'c2-3-lab', 'c2-4-queen'];
+    const cards = ['prologue', 'station', 'alien'].flatMap((chapter) => levelCards(campaign, chapter));
+    expect(cards.map((card) => card.id)).toEqual(expected);
+    expect(cards.every((card) => card.unlocked && card.valid && !card.planned && !card.completed)).toBe(true);
+    expect(expected.every((id) => levels.isUnlocked(id) && !levels.isCompleted(id))).toBe(true);
+    expect(campaign.episodesOf('station').every((episode) => episode.playable && !episode.completed)).toBe(true);
+    expect(campaign.progressOf('station')).toMatchObject({ completed: 0, total: 4, isCompleted: false });
+    expect(campaign.episodesOf('alien').every((episode) => episode.playable && !episode.completed)).toBe(true);
+    expect(campaign.progressOf('alien')).toMatchObject({ completed: 0, total: 4, isCompleted: false });
+    expect(storage.load()).toBeNull();
+  });
+
+  it('keeps alien locked under standard progression and unknown levels inaccessible', () => {
+    const { campaign, levels } = create(memoryStorage(), STANDARD_ACCESS);
+    expect(campaign.availableChapters().map((chapter) => chapter.id)).toEqual(['prologue', 'station']);
+    expect(campaign.chapter('alien')).toMatchObject({ status: 'ready', levels: ['c2-1-landing', 'c2-2-caves', 'c2-3-lab', 'c2-4-queen'] });
+    expect(chapterCards(campaign, (id) => BIOMES[id]?.name ?? id).find((card) => card.id === 'alien')).toMatchObject({ stateLabel: 'Bloqueado', selectable: false });
+    expect(campaign.episodesOf('alien').every((episode) => !episode.playable)).toBe(true);
+    expect(campaign.episodesOf('alien').every((episode) => !!episode.level)).toBe(true);
+    expect(['c2-1-landing', 'c2-2-caves', 'c2-3-lab', 'c2-4-queen'].every((id) => !levels.isUnlocked(id))).toBe(true);
+    expect(levels.isUnlocked('unknown-level')).toBe(false);
+  });
+
+  it('unlocks all alien episodes after station and persists chapter 2 victory without chapter 3', () => {
+    const storage = memoryStorage();
+    const { campaign } = create(storage, STANDARD_ACCESS);
+    for (const id of ['forest-1', 'ruins-1', 'ice-1', 'volcano-1']) campaign.complete(id, { stars: 0, total: 0 });
+    for (const id of ['c1-1-hangar', 'c1-2-corridors', 'c1-3-reactor', 'c1-4-omega']) campaign.complete(id, { stars: 0, total: 0 });
+    expect(campaign.isChapterUnlocked('alien')).toBe(true);
+    expect(campaign.episodesOf('alien').map((episode) => episode.playable)).toEqual([true, false, false, false]);
+    for (const id of ['c2-1-landing', 'c2-2-caves', 'c2-3-lab']) {
+      expect(campaign.isLevelUnlocked(id)).toBe(true);
+      campaign.complete(id, { stars: 0, total: 0 });
+    }
+    expect(campaign.isLevelUnlocked('c2-4-queen')).toBe(true);
+    const victory = campaign.complete('c2-4-queen', { stars: 0, total: 0 });
+    expect(victory.chapterCompleted).toBe(true);
+    const restored = create(storage).campaign;
+    expect(restored.isChapterCompleted('alien')).toBe(true);
+    expect(restored.isLevelCompleted('c2-4-queen')).toBe(true);
+    expect(restored.chapter('chapter3')).toBeUndefined();
+  });
+
+  it('persists real completions and restores sequential locks when free access is disabled', () => {
+    const storage = memoryStorage();
+    const { campaign } = create(storage);
+    campaign.complete('c1-4-omega', { stars: 4, total: 20 });
+    const restored = create(storage).campaign;
+    expect(restored.progressOfLevel('c1-4-omega')).toEqual({ stars: 4, total: 20 });
+    expect(restored.progressOf('station')).toMatchObject({ completed: 1, total: 4, stars: 4, isCompleted: false });
+    expect(restored.isLevelCompleted('c1-1-hangar')).toBe(false);
+    const standard = create(storage, STANDARD_ACCESS).campaign;
+    expect(standard.isLevelUnlocked('c1-1-hangar')).toBe(true);
+    expect(standard.isLevelUnlocked('c1-2-corridors')).toBe(false);
+    expect(standard.isLevelUnlocked('ice-1')).toBe(false);
+    expect(standard.isLevelCompleted('c1-4-omega')).toBe(true);
+  });
+});
+
 describe('campaign.json', () => {
   const { chapters, issues } = realCampaign();
 
@@ -69,18 +138,20 @@ describe('campaign.json', () => {
     expect(registry.map((f) => readJson(`levels/${f}`).id)).toEqual(prologue.levels);
   });
 
-  it('publishes all four station episodes; the alien chapter stays planned', () => {
+  it('publishes all station and alien episodes while preserving station unlock progression', () => {
     expect(chapters[1]).toMatchObject({ status: 'ready', levels: ['c1-1-hangar', 'c1-2-corridors', 'c1-3-reactor', 'c1-4-omega'], biome: 'station' });
     expect(chapters[1].episodes).toHaveLength(4);
-    expect(chapters[2]).toMatchObject({ status: 'planned', plannedLevels: 4, levels: [], biome: 'alien' });
+    expect(chapters[2]).toMatchObject({ status: 'ready', plannedLevels: 0, levels: ['c2-1-landing', 'c2-2-caves', 'c2-3-lab', 'c2-4-queen'], biome: 'alien' });
     expect(chapters[1].unlock).toEqual([]);
     expect(chapters[2].unlock).toEqual(['station']);
+    expect(chapters[2].episodes[3].boss).toBe('swarm-queen');
   });
 
-  it('planned chapters are never playable', () => {
+  it('published alien episodes remain locked until their prerequisite chapter is complete', () => {
     const { campaign } = realCampaign();
     expect(campaign.isChapterUnlocked('alien')).toBe(false);
-    expect(campaign.levelsOf('alien')).toEqual([]);
+    expect(campaign.levelsOf('alien').map((level) => level.id)).toEqual(['c2-1-landing', 'c2-2-caves', 'c2-3-lab', 'c2-4-queen']);
+    expect(campaign.episodesOf('alien').every((episode) => !!episode.level && !episode.playable)).toBe(true);
     expect(campaign.isChapterUnlocked('station')).toBe(true);
   });
 
@@ -332,7 +403,7 @@ describe('variantes de bioma', () => {
 
   it('the four original biomes keep their ids, texture keys and have no variants', () => {
     const originals = ['forest', 'ice', 'ruins', 'volcano'];
-    expect(Object.keys(BIOMES).sort()).toEqual([...originals, 'station'].sort());
+    expect(Object.keys(BIOMES).sort()).toEqual([...originals, 'station', 'alien'].sort());
     for (const id of originals) {
       const biome = BIOMES[id];
       expect(biome).toMatchObject({ baseId: id, variant: null, variants: {} });
@@ -340,7 +411,7 @@ describe('variantes de bioma', () => {
       expect(biome.assets).toHaveLength(9);
       expect(BIOME_VARIANTS[id]).toEqual([]);
     }
-    expect(BIOME_THEMES).toHaveLength(4 + 1 + 4);
+    expect(BIOME_THEMES).toHaveLength(4 + 1 + 4 + 1 + 4);
     expect(getBiome('ice')).toBe(BIOMES.ice);
   });
 
@@ -467,7 +538,7 @@ describe('selección y navegación', () => {
     expect(prologue).toMatchObject({ id: 'prologue', name: 'Prologo', biome: 'Varios', levels: '0/4', stars: '0/110', stateLabel: 'Disponible', selectable: true });
     expect(prologue.description).not.toBe('');
     expect(station).toMatchObject({ stateLabel: 'Disponible', selectable: true, levels: '0/4', status: 'ready', biome: 'Estacion espacial' });
-    expect(alien).toMatchObject({ stateLabel: 'Proximamente', selectable: false });
+    expect(alien).toMatchObject({ stateLabel: 'Bloqueado', selectable: false, status: 'ready', levels: '0/4' });
     expect(station.requires).toEqual([]);
     for (const id of ['forest-1', 'ruins-1', 'ice-1', 'volcano-1']) campaign.complete(id, { stars: 1, total: 1 });
     const done = chapterCards(campaign, name)[0];

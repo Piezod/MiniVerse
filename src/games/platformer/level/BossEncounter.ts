@@ -5,6 +5,7 @@ export interface BossEncounter {
   enemy: string;
   arena: { col: number; row: number; width: number; height: number };
   signals: { engaged: string; hazards: string; defeated: string };
+  vulnerableBy?: string[];
   intro: string;
   victory: string;
 }
@@ -21,7 +22,7 @@ export function validateBossEncounter(
   if (raw === undefined) return { encounter: null, issues: [] };
   const issues: string[] = [];
   if (!record(raw) || !record(raw.arena) || !record(raw.signals)) return { encounter: null, issues: ['bossEncounter necesita enemy, arena, signals, intro y victory'] };
-  for (const key of Object.keys(raw)) if (!['enemy', 'arena', 'signals', 'intro', 'victory'].includes(key)) issues.push(`bossEncounter: campo desconocido ${key}`);
+  for (const key of Object.keys(raw)) if (!['enemy', 'arena', 'signals', 'vulnerableBy', 'intro', 'victory'].includes(key)) issues.push(`bossEncounter: campo desconocido ${key}`);
   const enemy = typeof raw.enemy === 'string' ? raw.enemy : '';
   if (!ID.test(enemy) || (enemies && !enemies[enemy]?.boss)) issues.push('bossEncounter.enemy debe ser un jefe registrado');
   const arena = raw.arena;
@@ -44,6 +45,11 @@ export function validateBossEncounter(
   for (const key of Object.keys(raw.signals)) if (!['engaged', 'hazards', 'defeated'].includes(key)) issues.push(`signals: campo desconocido ${key}`);
   const signals = { engaged: signal('engaged'), hazards: signal('hazards'), defeated: signal('defeated') };
   if (new Set(Object.values(signals)).size !== 3) issues.push('signals no pueden repetirse');
+  const vulnerableBy: string[] = [];
+  if (raw.vulnerableBy !== undefined) {
+    if (!Array.isArray(raw.vulnerableBy) || raw.vulnerableBy.length === 0 || raw.vulnerableBy.some((value) => typeof value !== 'string' || !ID.test(value))) issues.push('vulnerableBy debe ser una lista no vacía de señales válidas');
+    else vulnerableBy.push(...new Set(raw.vulnerableBy as string[]));
+  }
   const story = (key: string): string => {
     const value = raw[key];
     const beat = beats.find((entry) => entry.id === value);
@@ -54,5 +60,5 @@ export function validateBossEncounter(
   const victory = story('victory');
   const actors = level.enemies.filter((entry) => entry.type === enemy);
   if (actors.length !== 1 || actors.some((entry) => entry.col < bounds.col || entry.col >= bounds.col + bounds.width || entry.row < bounds.row || entry.row >= bounds.row + bounds.height)) issues.push('bossEncounter necesita exactamente un jefe dentro de la arena');
-  return { encounter: issues.length ? null : { enemy, arena: bounds, signals, intro, victory }, issues };
+  return { encounter: issues.length ? null : { enemy, arena: bounds, signals, ...(vulnerableBy.length ? { vulnerableBy } : {}), intro, victory }, issues };
 }

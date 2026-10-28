@@ -17,6 +17,7 @@ export interface EnemySpriteDef {
 export const ENEMY_SPRITES: Readonly<Record<string, EnemySpriteDef>> = {
   walker: { texture: TEX.walker, body: { width: 12, height: 10, offsetX: 2, offsetY: 6 }, facesLeft: true, frameRate: 6, anims: { move: [0, 1], death: [2, 3] } },
   bat: { texture: TEX.bat, body: { width: 10, height: 8, offsetX: 3, offsetY: 5 }, facesLeft: true, frameRate: 10, anims: { move: [0, 1], death: [2] } },
+  'nexar-bat': { texture: TEX.nexarBat, body: { width: 12, height: 9, offsetX: 2, offsetY: 4 }, facesLeft: true, frameRate: 9, anims: { move: [0, 1], attack: [2], death: [3] } },
   golem: {
     texture: TEX.golem,
     body: { width: 16, height: 18, offsetX: 4, offsetY: 6 },
@@ -29,9 +30,14 @@ export const ENEMY_SPRITES: Readonly<Record<string, EnemySpriteDef>> = {
   spitter: { texture: TEX.spitter, body: { width: 10, height: 10, offsetX: 3, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0], attack: [1], death: [2] } },
   turret: { texture: TEX.turret, body: { width: 18, height: 18, offsetX: 3, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], death: [3] } },
   guardian: { texture: TEX.guardian, body: { width: 16, height: 26, offsetX: 4, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  'organic-guardian': { texture: TEX.organicGuardian, body: { width: 16, height: 26, offsetX: 4, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
   'electric-drone': { texture: TEX.electricDrone, body: { width: 12, height: 12, offsetX: 6, offsetY: 6 }, facesLeft: true, frameRate: 6, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
   technician: { texture: TEX.technician, body: { width: 12, height: 24, offsetX: 6, offsetY: 8 }, facesLeft: true, frameRate: 5, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  'bio-technician': { texture: TEX.bioTechnician, body: { width: 12, height: 24, offsetX: 6, offsetY: 8 }, facesLeft: true, frameRate: 5, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  stalker: { texture: TEX.stalker, body: { width: 18, height: 14, offsetX: 3, offsetY: 8 }, facesLeft: true, frameRate: 7, anims: { move: [0, 1], attack: [2], recover: [3], death: [4] } },
+  'spore-spitter': { texture: TEX.sporeSpitter, body: { width: 18, height: 16, offsetX: 3, offsetY: 6 }, facesLeft: true, frameRate: 4, anims: { move: [0], attack: [1], death: [2] } },
   omega: { texture: TEX.omega, body: { width: 32, height: 40, offsetX: 8, offsetY: 8 }, facesLeft: true, frameRate: 4, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
+  'swarm-queen': { texture: TEX.swarmQueen, body: { width: 30, height: 34, offsetX: 9, offsetY: 12 }, facesLeft: true, frameRate: 5, anims: { move: [0, 1], attack: [2], recover: [4], death: [3] } },
 };
 
 export const enemyAnimKey = (sprite: string, anim: 'move' | 'attack' | 'recover' | 'death'): string => `platformer.enemy.${sprite}.${anim}`;
@@ -51,4 +57,5 @@ export const ENEMY_ANIMS: readonly AnimationDef[] = Object.entries(ENEMY_SPRITES
 export const PROJECTILE_ANIMS: readonly AnimationDef[] = [
   { key: 'platformer.projectile.beam', texture: TEX.projectiles, frames: [0, 1], frameRate: 12 },
   { key: 'platformer.projectile.fireball', texture: TEX.projectiles, frames: [2, 3], frameRate: 8 },
+  { key: 'platformer.projectile.spore', texture: TEX.spore, frames: [0, 1], frameRate: 6 },
 ];

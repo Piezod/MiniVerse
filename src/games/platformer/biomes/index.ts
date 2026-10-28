@@ -4,8 +4,9 @@ import { ICE } from './definitions/ice';
 import { RUINS } from './definitions/ruins';
 import { STATION } from './definitions/station';
 import { VOLCANO } from './definitions/volcano';
+import { ALIEN } from './definitions/alien';
 
-const FAMILIES: readonly BiomeTheme[] = [FOREST, ICE, VOLCANO, RUINS, STATION];
+const FAMILIES: readonly BiomeTheme[] = [FOREST, ICE, VOLCANO, RUINS, STATION, ALIEN];
 
 /** Base biomes available to level files ("biome": "<id>"). Add new definitions to FAMILIES. */
 export const BIOMES: Readonly<Record<string, BiomeTheme>> = Object.fromEntries(FAMILIES.map((biome) => [biome.id, biome]));

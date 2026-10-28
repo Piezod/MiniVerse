@@ -5,9 +5,9 @@ import { hex, PALETTE } from '../assets/palette';
 import { DEPTH } from '../view/ParallaxBackground';
 import { type ObjectContext, type ObjectFactory, ObjectRegistry } from './LevelObjectManager';
 import { type Box, boxesOverlap, doorShouldBeOpen, HazardCycle, type HazardPhase, hazardEnabled, PathMotion, SwitchModel } from './models';
-import { doorTexture, electricTexture, emitterTexture, platformTexture, switchTexture, TILE } from './objectArt';
+import { boostPlantTexture, doorTexture, electricTexture, emitterTexture, organicNodeTexture, platformTexture, switchTexture, TILE, toxicTexture } from './objectArt';
 import type { SceneHost } from './sceneHost';
-import type { DoorConfig, ElectricFloorConfig, LaserConfig, MovingPlatformConfig, SwitchConfig } from './types';
+import type { BoostPlantConfig, DoorConfig, ElectricFloorConfig, LaserConfig, MovingPlatformConfig, OrganicNodeConfig, SwitchConfig, ToxicFloorConfig } from './types';
 
 type Host = ObjectContext<SceneHost>;
 
@@ -68,7 +68,7 @@ const movingPlatform: ObjectFactory<SceneHost, MovingPlatformConfig> = (config, 
 };
 
 /** Shared by lasers and electric floors: gate by switches, advance the cycle and report the phase. */
-function runHazard(cycle: HazardCycle, config: LaserConfig | ElectricFloorConfig, host: Host, dt: number): HazardPhase {
+function runHazard(cycle: HazardCycle, config: LaserConfig | ElectricFloorConfig | ToxicFloorConfig, host: Host, dt: number): HazardPhase {
   cycle.setEnabled(hazardEnabled(config, host.signals));
   cycle.update(dt);
   return cycle.phase;
@@ -113,6 +113,11 @@ const laser: ObjectFactory<SceneHost, LaserConfig> = (config, host) => {
       }
       if (boxesOverlap(beam, playerBox(host))) hurtPlayer(host, config.damage, 'laser', beam.x + beam.width / 2);
     },
+    pause() {
+      cycle.setEnabled(false);
+      parts.forEach((part) => part.setVisible(false));
+      emitter.setTint(0xb0b0c8);
+    },
     destroy() {
       if (destroyed) return;
       destroyed = true;
@@ -147,6 +152,51 @@ const electricFloor: ObjectFactory<SceneHost, ElectricFloorConfig> = (config, ho
         host.fx.impact(zone.x + Math.random() * zone.width, zone.y, 'beam');
       }
       if (boxesOverlap(zone, playerBox(host))) hurtPlayer(host, config.damage, 'energy', zone.x + zone.width / 2);
+    },
+    pause() {
+      cycle.setEnabled(false);
+      cells.forEach((cell) => cell.setTexture(electricTexture(scene, 'off')));
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      cells.forEach((cell) => cell.destroy());
+    },
+  };
+};
+
+const toxicFloor: ObjectFactory<SceneHost, ToxicFloorConfig> = (config, host) => {
+  const { scene } = host;
+  const cells = Array.from({ length: config.width }, (_, i) => scene.add.image(config.col * TILE + i * TILE, config.row * TILE, toxicTexture(scene, 'off')).setOrigin(0, 0).setDepth(DEPTH.props));
+  const zone: Box = { x: config.col * TILE, y: config.row * TILE + 9, width: config.width * TILE, height: 7 };
+  const cycle = new HazardCycle(config);
+  let clock = 0;
+  let damageLeft = 0;
+  let destroyed = false;
+
+  return {
+    config,
+    update(dt) {
+      if (destroyed) return;
+      clock += dt;
+      const phase = runHazard(cycle, config, host, dt);
+      const frame = phase === 'active' ? (Math.floor(clock * 8) % 2 === 0 ? 'on' : 'on2') : phase === 'warning' && Math.floor(clock * 8) % 2 === 0 ? 'warning' : 'off';
+      cells.forEach((cell) => cell.setTexture(toxicTexture(scene, frame)));
+      const touching = boxesOverlap(zone, playerBox(host));
+      if (phase !== 'active' || !touching) {
+        damageLeft = 0;
+        return;
+      }
+      damageLeft = Math.max(0, damageLeft - dt);
+      if (damageLeft > 0) return;
+      damageLeft = config.interval;
+      host.fx.impact(zone.x + zone.width / 2, zone.y, 'fire');
+      hurtPlayer(host, config.damage, 'plasma', zone.x + zone.width / 2);
+    },
+    pause() {
+      cycle.setEnabled(false);
+      damageLeft = 0;
+      cells.forEach((cell) => cell.setTexture(toxicTexture(scene, 'off')));
     },
     destroy() {
       if (destroyed) return;
@@ -191,7 +241,7 @@ const door: ObjectFactory<SceneHost, DoorConfig> = (config, host) => {
   const { scene, player } = host;
   const x = config.col * TILE;
   const y = config.row * TILE;
-  const sprite = scene.physics.add.image(x, y, doorTexture(scene, config.height)).setOrigin(0, 0).setDepth(DEPTH.props);
+  const sprite = scene.physics.add.image(x, y, doorTexture(scene, config.height, config.style)).setOrigin(0, 0).setDepth(DEPTH.props);
   const body = sprite.body as Phaser.Physics.Arcade.Body;
   body.setAllowGravity(false);
   body.setImmovable(true);
@@ -228,7 +278,89 @@ const door: ObjectFactory<SceneHost, DoorConfig> = (config, host) => {
   };
 };
 
+const boostPlant: ObjectFactory<SceneHost, BoostPlantConfig> = (config, host) => {
+  const { scene, player } = host;
+  const x = config.col * TILE;
+  const y = config.row * TILE;
+  const sprite = scene.add.image(x, y, boostPlantTexture(scene, false)).setOrigin(0, 0).setDepth(DEPTH.props);
+  const zone: Box = { x: x + 1, y: y + 4, width: TILE - 2, height: TILE - 4 };
+  let armed = true;
+  let openFor = 0;
+  let destroyed = false;
+
+  return {
+    config,
+    update(dt) {
+      if (destroyed) return;
+      const touching = player.isAlive && boxesOverlap(zone, playerBox(host));
+      if (!touching) armed = true;
+      if (touching && armed) {
+        armed = false;
+        openFor = 0.22;
+        const diagonal = config.direction !== 'up';
+        const horizontal = config.direction === 'up-left' ? -1 : 1;
+        if (diagonal) player.body.setVelocityX(horizontal * config.force * 0.55);
+        player.body.setVelocityY(-config.force);
+        sprite.setTexture(boostPlantTexture(scene, true));
+        host.fx.jump(x + TILE / 2, y + 4);
+        playSound(scene, AUDIO.jump);
+      }
+      openFor = Math.max(0, openFor - dt);
+      if (openFor === 0) sprite.setTexture(boostPlantTexture(scene, false));
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      sprite.destroy();
+    },
+  };
+};
+
+const organicNode: ObjectFactory<SceneHost, OrganicNodeConfig> = (config, host) => {
+  const { scene } = host;
+  const model = new SwitchModel(config.id, config.mode === 'timed' ? config.duration : 0, host.signals);
+  const sprite = scene.add.image(config.col * TILE, config.row * TILE, organicNodeTexture(scene, false)).setOrigin(0, 0).setDepth(DEPTH.props);
+  const zone: Box = { x: config.col * TILE + 2, y: config.row * TILE + 2, width: TILE - 4, height: TILE - 2 };
+  let wasTouching = false;
+  let clock = 0;
+  let destroyed = false;
+
+  return {
+    config,
+    update(dt) {
+      if (destroyed) return;
+      clock += dt;
+      model.update(dt);
+      const touching = host.player.isAlive && boxesOverlap(zone, playerBox(host));
+      if (touching && !wasTouching) {
+        if (config.mode === 'toggle') model.toggle();
+        else model.activate();
+        host.fx.checkpoint(sprite.x + TILE / 2, sprite.y + 4);
+        playSound(scene, AUDIO.checkpoint);
+      }
+      wasTouching = touching;
+      const texture = organicNodeTexture(scene, model.isOn);
+      sprite.setTexture(texture);
+      if (config.mode === 'timed' && model.timeLeft > 0 && model.timeLeft < 1.5 && Math.floor(clock * 8) % 2 === 0) {
+        sprite.setAlpha(0.55);
+      } else sprite.setAlpha(1);
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      model.reset();
+      sprite.destroy();
+    },
+    reset() {
+      if (destroyed) return;
+      model.reset();
+      wasTouching = host.player.isAlive && boxesOverlap(zone, playerBox(host));
+      sprite.setTexture(organicNodeTexture(scene, false)).setAlpha(1);
+    },
+  };
+};
+
 /** Constructors of every built-in object type. Add new types here (and to OBJECT_TYPES / validate.ts). */
 export function createDefaultRegistry(): ObjectRegistry<SceneHost> {
-  return new ObjectRegistry<SceneHost>().register('movingPlatform', movingPlatform).register('laser', laser).register('electricFloor', electricFloor).register('switch', switchObject).register('door', door);
+  return new ObjectRegistry<SceneHost>().register('movingPlatform', movingPlatform).register('laser', laser).register('electricFloor', electricFloor).register('switch', switchObject).register('door', door).register('boostPlant', boostPlant).register('toxicFloor', toxicFloor).register('organicNode', organicNode);
 }

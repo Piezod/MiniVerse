@@ -10,6 +10,7 @@ import { type EnemyDef, isFlying } from '../enemies/EnemyCatalog';
 import { hoverPatrol, leashedChase, lungeVelocity, telegraphOn } from '../enemies/flight';
 import { DEPTH } from '../view/ParallaxBackground';
 import { OmegaController } from '../enemies/OmegaController';
+import { SwarmQueenController } from '../enemies/SwarmQueenController';
 
 /** What an enemy needs from the level, without depending on the scene class. */
 export interface EnemyHost {
@@ -23,6 +24,9 @@ export interface EnemyHost {
   enemyDied(enemy: Enemy): void;
   bossEngaged?(enemy: Enemy): boolean;
   bossHazards?(enemy: Enemy, active: boolean): void;
+  bossNodesActive?(enemy: Enemy): boolean;
+  bossNodesReset?(enemy: Enemy): void;
+  bossSupport?(enemy: Enemy): void;
   clearBossShots?(enemy: Enemy): void;
 }
 
@@ -39,6 +43,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly health: Health;
   readonly status: StatusEffects;
   readonly omega: OmegaController | null;
+  readonly swarmQueen: SwarmQueenController | null;
   private readonly defense: Defense;
   private readonly sprite: EnemySpriteDef;
   private readonly attackCooldown: Cooldown;
@@ -75,6 +80,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.sprite = sprite;
     this.health = new Health(def.maxHealth);
     this.omega = def.id === 'omega-7' ? new OmegaController() : null;
+    this.swarmQueen = def.id === 'swarm-queen' ? new SwarmQueenController() : null;
     this.defense = { element: def.element, armor: def.armor, resist: def.resist, formResist: def.formResist, immune: def.immune };
     this.status = new StatusEffects(host.statusCatalog, { element: def.element, immune: def.statusImmune });
     this.attackCooldown = new Cooldown(def.attack?.cooldown ?? 1);
@@ -93,11 +99,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (isFlying(def)) this.body.setAllowGravity(false);
     if (def.movement === 'stationary') this.body.setImmovable(true);
     this.bar = def.healthBar ? scene.add.graphics().setDepth(DEPTH.enemies + 1) : null;
-    if (this.omega) this.bar?.setScrollFactor(0);
+    if (this.omega || this.swarmQueen) this.bar?.setScrollFactor(0);
     this.play(enemyAnimKey(def.sprite, 'move'));
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
       this.host.clearBossShots?.(this);
-      if (this.omega) {
+      if (this.omega || this.swarmQueen) {
         this.host.bossHazards?.(this, false);
       }
       this.hurtFlash?.remove(false);
@@ -115,7 +121,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   get contactActive(): boolean {
-    return this.omega ? this.omega.contactActive : true;
+    return this.omega ? this.omega.contactActive : this.swarmQueen ? this.swarmQueen.contactActive : true;
+  }
+
+  get swarmQueenProtected(): boolean {
+    return this.swarmQueen?.isProtected ?? false;
+  }
+
+  get swarmQueenVulnerable(): boolean {
+    return this.swarmQueen?.vulnerable ?? false;
+  }
+
+  takeSwarmSupportSlot(): boolean {
+    return this.swarmQueen?.takeSupportSlot() ?? false;
   }
 
   suspendOmega(reset = false): void {
@@ -136,6 +154,30 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.drawHealthBar();
   }
 
+  suspendBoss(reset = false): void {
+    if (this.omega) {
+      this.suspendOmega(reset);
+      return;
+    }
+    if (!this.swarmQueen || !this.isAlive) return;
+    this.swarmQueen.suspend();
+    this.body.stop();
+    this.host.bossHazards?.(this, false);
+    this.host.clearBossShots?.(this);
+    this.host.bossNodesReset?.(this);
+    if (reset) {
+      this.health.reset();
+      this.status.clear();
+      this.swarmQueen.reset();
+      this.body.reset(this.homeX, this.homeY);
+      this.stompImmunity = 0;
+      this.hurtTime = 0;
+      this.recoveryTime = 0;
+    }
+    this.restoreTint();
+    this.drawHealthBar();
+  }
+
   /**
    * Applies a hit through the shared damage model. Situational modifiers added here: the frontal
    * guard and status vulnerability (Sobrecarga). Status effects of the hit are rolled afterwards.
@@ -143,6 +185,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   applyHit(hit: Hit): HitResult {
     if (!this.isAlive) return { damage: 0, killed: false, immune: false };
     if (this.omega && !this.omega.vulnerable) return { damage: 0, killed: false, immune: true };
+    if (this.swarmQueen && !this.swarmQueen.vulnerable) return { damage: 0, killed: false, immune: true };
     if (this.def.guard === 0 && hit.form !== 'status' && (hit.fromX === undefined || (hit.fromX - this.x) * this.direction >= 0)) {
       return { damage: 0, killed: false, immune: true };
     }
@@ -187,6 +230,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.host.clearBossShots?.(this);
       }
     }
+    if (this.swarmQueen && !result.killed) {
+      const previousPhase = this.swarmQueen.phase;
+      this.swarmQueen.update(0, this.health.fraction, this.host.bossEngaged?.(this) ?? true, this.host.bossNodesActive?.(this) ?? false);
+      if (previousPhase !== this.swarmQueen.phase) {
+        this.body.stop();
+        this.host.bossHazards?.(this, false);
+        this.host.clearBossShots?.(this);
+        this.host.bossNodesReset?.(this);
+      }
+    }
     return result;
   }
 
@@ -210,6 +263,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.omega) {
       this.stompImmunity = Math.max(0, this.stompImmunity - dt);
       this.updateOmega(dt);
+      return;
+    }
+    if (this.swarmQueen) {
+      this.stompImmunity = Math.max(0, this.stompImmunity - dt);
+      this.updateSwarmQueen(dt);
       return;
     }
     if (this.status.stunned) {
@@ -356,6 +414,50 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.drawHealthBar();
   }
 
+  private updateSwarmQueen(dt: number): void {
+    const queen = this.swarmQueen!;
+    const target = this.host.target();
+    const previousState = queen.state;
+    const previousPhase = queen.phase;
+    const pattern = queen.update(dt, this.health.fraction, target.alive && !this.status.stunned && (this.host.bossEngaged?.(this) ?? true), this.host.bossNodesActive?.(this) ?? false);
+    if ((queen.state === 'transition' || queen.state === 'dormant') && previousState !== queen.state || previousPhase !== queen.phase) {
+      this.body.stop();
+      this.host.clearBossShots?.(this);
+      if (previousPhase !== queen.phase) this.host.bossNodesReset?.(this);
+    }
+    this.host.bossHazards?.(this, queen.hazardsActive);
+    const diving = queen.state === 'attack' && queen.pattern === 'dive';
+    if (!diving) this.body.setVelocity(0, 0);
+    if (queen.state === 'telegraph') {
+      this.direction = Math.sign(target.x - this.x) || this.direction;
+      this.attackTarget = { x: target.x, y: target.y };
+      if (telegraphOn(this.scene.time.now / 1000)) this.setTintFill(queen.isProtected ? 0xb86cff : 0xff6fae);
+      else this.restoreTint();
+    } else if (queen.isProtected) this.setTintFill(0x9d65ce);
+    else if (queen.vulnerable) this.setTintFill(0x9dff9f);
+    else this.restoreTint();
+
+    if (pattern === 'spores') {
+      const speed = queen.phase === 3 ? 132 : queen.phase === 2 ? 116 : 100;
+      const base = Phaser.Math.Angle.Between(this.x, this.y - this.displayHeight / 2, this.attackTarget.x, this.attackTarget.y);
+      const spread = queen.phase === 3 ? [-0.16, 0, 0.16] : [0];
+      for (const offset of spread) this.host.enemyShoot(this, Math.cos(base + offset) * speed, Math.sin(base + offset) * speed, this.def.attack?.damage ?? 1);
+    }
+    if (diving) {
+      const velocity = lungeVelocity({ x: this.x, y: this.y }, this.attackTarget, queen.phase === 3 ? 196 : 160);
+      this.body.setVelocity(velocity.vx, velocity.vy);
+    }
+    if (pattern === 'summon') {
+      for (let count = 0; count < 2; count++) if (queen.takeSupportSlot()) this.host.bossSupport?.(this);
+    }
+
+    this.ai = queen.state === 'attack' || queen.state === 'telegraph' ? 'attack' : queen.state === 'recover' ? 'recover' : 'idle';
+    this.setFlipX(this.direction > 0 === this.sprite.facesLeft);
+    const animation = queen.vulnerable ? 'recover' : this.ai === 'attack' ? 'attack' : 'move';
+    this.play(enemyAnimKey(this.def.sprite, animation), true);
+    this.drawHealthBar();
+  }
+
   private patrol(speed: number): void {
     const body = this.body;
     if (body.blocked.left) this.direction = 1;
@@ -419,9 +521,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.shotsRemaining = 0;
     this.host.clearBossShots?.(this);
     this.omega?.defeat();
-    if (this.omega) {
+    this.swarmQueen?.defeat();
+    if (this.omega || this.swarmQueen) {
       this.host.bossHazards?.(this, false);
     }
+    if (this.swarmQueen) this.host.bossNodesReset?.(this);
     this.ai = 'death';
     this.status.clear();
     if (this.anims.isPaused) this.anims.resume();
@@ -436,14 +540,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private drawHealthBar(): void {
     if (!this.bar) return;
     this.bar.clear();
-    if (this.omega?.state === 'dormant') return;
+    if (this.omega?.state === 'dormant' || this.swarmQueen?.state === 'dormant') return;
     if (!this.def.boss && this.health.fraction >= 1) return;
-    const width = this.omega ? 96 : Math.max(12, Math.round(this.displayWidth * 0.8));
-    const x = this.omega ? 112 : Math.round(this.x - width / 2);
-    const y = this.omega ? 160 : Math.round(this.y - this.displayHeight - 4);
+    const boss = this.omega || this.swarmQueen;
+    const width = boss ? 96 : Math.max(12, Math.round(this.displayWidth * 0.8));
+    const x = boss ? 112 : Math.round(this.x - width / 2);
+    const y = this.omega ? 160 : this.swarmQueen ? 10 : Math.round(this.y - this.displayHeight - 4);
     this.bar.fillStyle(0x141327).fillRect(x - 1, y - 1, width + 2, 4);
-    this.bar.fillStyle(this.def.boss ? 0xff7a45 : 0xff5a7a).fillRect(x, y, Math.ceil(width * this.health.fraction), 2);
+    const color = this.swarmQueen?.isProtected ? 0xb86cff : this.swarmQueen?.vulnerable ? 0x9dff9f : this.def.boss ? 0xff7a45 : 0xff5a7a;
+    this.bar.fillStyle(color).fillRect(x, y, Math.ceil(width * this.health.fraction), 2);
     if (this.omega) {
+      this.bar.fillStyle(0xfff8ec).fillRect(x + Math.round(width * 0.7), y - 1, 1, 4);
+      this.bar.fillRect(x + Math.round(width * 0.35), y - 1, 1, 4);
+    } else if (this.swarmQueen) {
       this.bar.fillStyle(0xfff8ec).fillRect(x + Math.round(width * 0.7), y - 1, 1, 4);
       this.bar.fillRect(x + Math.round(width * 0.35), y - 1, 1, 4);
     }

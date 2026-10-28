@@ -1,6 +1,6 @@
 /** Level object configuration types (Phaser-free). Objects are declared per level in the level JSON under "objects". */
 
-export const OBJECT_TYPES = ['movingPlatform', 'laser', 'electricFloor', 'switch', 'door'] as const;
+export const OBJECT_TYPES = ['movingPlatform', 'laser', 'electricFloor', 'switch', 'door', 'boostPlant', 'toxicFloor', 'organicNode'] as const;
 export type ObjectType = (typeof OBJECT_TYPES)[number];
 
 /** Hazard timeline: off → warning → active, repeating. `permanent` skips the cycle (after the warning when gated). */
@@ -76,9 +76,31 @@ export interface DoorConfig extends Base {
   opensWith: string[];
   /** Open by default and closed while the switches are on. */
   inverted: boolean;
+  style: 'metal' | 'membrane';
 }
 
-export type LevelObjectConfig = MovingPlatformConfig | LaserConfig | ElectricFloorConfig | SwitchConfig | DoorConfig;
+export interface BoostPlantConfig extends Base {
+  type: 'boostPlant';
+  direction: 'up' | 'up-left' | 'up-right';
+  /** Upward launch speed in px/s. Diagonal launches use 55% of this horizontally. */
+  force: number;
+}
+
+export interface ToxicFloorConfig extends Base, HazardTiming, Gated {
+  type: 'toxicFloor';
+  width: number;
+  damage: number;
+  interval: number;
+}
+
+export interface OrganicNodeConfig extends Base {
+  type: 'organicNode';
+  id: string;
+  mode: 'toggle' | 'timed';
+  duration: number;
+}
+
+export type LevelObjectConfig = MovingPlatformConfig | LaserConfig | ElectricFloorConfig | SwitchConfig | DoorConfig | BoostPlantConfig | ToxicFloorConfig | OrganicNodeConfig;
 
 export interface ObjectIssue {
   severity: 'error' | 'warning';

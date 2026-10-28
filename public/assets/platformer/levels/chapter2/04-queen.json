@@ -1,0 +1,143 @@
+{
+  "id": "c2-4-queen",
+  "name": "El corazón del Enjambre",
+  "biome": "alien",
+  "variant": "nest",
+  "height": 18,
+  "sections": [
+    {
+      "name": "Umbral del nido",
+      "rows": [
+        "..............................====........",
+        "..................=============.............",
+        "........====.................................",
+        "..............................................",
+        "....XXXXX.....................................",
+        "..............................................",
+        "..P...A......F................................",
+        "##############################################",
+        "##############################################",
+        "##############################################"
+      ]
+    },
+    {
+      "name": "Jardines del nido",
+      "rows": [
+        "...S...........====.........................",
+        "...............========.......................",
+        ".....====.....................................",
+        "..............................................",
+        "..............XXXXX...........................",
+        "............................S.................",
+        "...C...............G.........................",
+        "##############################################",
+        "##############################################",
+        "##############################################"
+      ]
+    },
+    {
+      "name": "Cámara de muda",
+      "rows": [
+        "....S..........====..........................",
+        "..............========.........................",
+        ".......====....................................",
+        "..............................................",
+        ".....XXXXX...................XXXXX............",
+        "............................S.................",
+        "..F...........B........G......................",
+        "###############################################",
+        "###############################################",
+        "###############################################"
+      ]
+    },
+    {
+      "name": "Antesala de la Reina",
+      "rows": [
+        ".................====..........................",
+        ".................========......................",
+        "......====......................................",
+        "..............................................",
+        "................XXXXX.........................",
+        "...............S..............................",
+        "...A.............L...........K................",
+        "################################################",
+        "################################################",
+        "################################################"
+      ]
+    },
+    {
+      "name": "Arena del corazón",
+      "rows": [
+        "...........====....................====..............",
+        "...........========................========..........",
+        ".....====............................................",
+        "................................................",
+        ".............XXXXX................XXXXX............",
+        "................................................",
+        "................................................",
+        "..............Q..................................",
+        "#####################################################",
+        "#####################################################"
+      ]
+    },
+    {
+      "name": "Salida del nido",
+      "rows": [
+        "....................====........................",
+        "...................========.....................",
+        ".........====...................................",
+        "..............................................",
+        ".....XXXXX.....................XXXXX...........",
+        "..............................................",
+        "..............................................",
+        ".................O............................",
+        "################################################",
+        "################################################"
+      ]
+    }
+  ],
+  "enemies": {
+    "A": "stalker",
+    "B": "bio-technician",
+    "C": "spore-spitter",
+    "F": "nexar-bat",
+    "G": "organic-guardian",
+    "L": "nexar-technician",
+    "Q": "swarm-queen"
+  },
+  "objects": [
+    { "type": "movingPlatform", "col": 19, "row": 9, "width": 4, "axis": "x", "travel": 6, "speed": 32, "wait": 0.8 },
+    { "type": "toxicFloor", "col": 49, "row": 15, "width": 4, "damage": 1, "interval": 0.9, "mode": "periodic", "on": 1.4, "off": 1.5, "warning": 0.8 },
+    { "type": "movingPlatform", "col": 82, "row": 10, "width": 4, "axis": "y", "travel": -4, "speed": 32, "wait": 0.8 },
+    { "type": "door", "id": "queen-arena-entry", "col": 186, "row": 8, "height": 8, "opensWith": "queen-engaged", "inverted": true },
+    { "type": "organicNode", "id": "queen-left-node", "col": 190, "row": 15, "mode": "toggle" },
+    { "type": "movingPlatform", "col": 191, "row": 11, "width": 4, "axis": "x", "travel": 5, "speed": 40, "wait": 0.6 },
+    { "type": "toxicFloor", "col": 196, "row": 15, "width": 2, "damage": 1, "interval": 0.7, "mode": "permanent", "on": 1.5, "off": 1.6, "warning": 0.6, "enabledBy": "queen-hazards" },
+    { "type": "toxicFloor", "col": 200, "row": 15, "width": 2, "damage": 1, "interval": 0.7, "mode": "permanent", "on": 1.5, "off": 1.6, "warning": 0.6, "enabledBy": "queen-hazards" },
+    { "type": "organicNode", "id": "queen-right-node", "col": 204, "row": 15, "mode": "toggle" },
+    { "type": "movingPlatform", "col": 200, "row": 12, "width": 4, "axis": "x", "travel": -3, "speed": 38, "wait": 0.6 },
+    { "type": "door", "id": "queen-arena-exit", "col": 207, "row": 8, "height": 8, "opensWith": "queen-defeated" },
+    { "type": "movingPlatform", "col": 246, "row": 10, "width": 4, "axis": "y", "travel": -4, "speed": 32, "wait": 0.8 }
+  ],
+  "story": {
+    "beats": [
+      { "id": "queen-approach", "trigger": { "type": "start" }, "lines": [{ "speaker": "luma", "text": "La señal termina aquí. La Reina mantiene unido el nido; prepárate para cortar su vínculo." }] },
+      { "id": "queen-nest-rest", "trigger": { "type": "zone", "col": 174, "row": 12, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "El checkpoint está activo. Dos nodos rodean el núcleo: al encender ambos, la Reina quedará expuesta." }] },
+      { "id": "queen-intro", "blocking": true, "trigger": { "type": "event" }, "lines": [{ "speaker": "luma", "text": "Entidad central detectada. Sus ataques cargan antes de impactar; espera a que el núcleo se abra." }] },
+      { "id": "queen-victory", "blocking": true, "trigger": { "type": "event" }, "lines": [
+        { "speaker": "luma", "text": "La red está cayendo. Los peligros se han detenido y ya no detecto criaturas en la arena." },
+        { "speaker": "transmision", "text": "Registro final: supervivientes humanos enviados a La Forja de los Cautivos. Carga completada." },
+        { "speaker": "luma", "text": "Encontré otra referencia a PIEZOD. Tu código aparece en el proyecto NÉXAR, antes de que yo existiera." },
+        { "speaker": "piezod", "text": "Entonces iremos a La Forja. La estación no fue el principio de esta historia." }
+      ] }
+    ]
+  },
+  "bossEncounter": {
+    "enemy": "swarm-queen",
+    "arena": { "col": 187, "row": 8, "width": 20, "height": 10 },
+    "signals": { "engaged": "queen-engaged", "hazards": "queen-hazards", "defeated": "queen-defeated" },
+    "vulnerableBy": ["queen-left-node", "queen-right-node"],
+    "intro": "queen-intro",
+    "victory": "queen-victory"
+  }
+}

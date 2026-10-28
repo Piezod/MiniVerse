@@ -1,0 +1,136 @@
+{
+  "id": "c2-1-landing",
+  "name": "Ca\u00edda en territorio hostil",
+  "biome": "alien",
+  "variant": "jungle",
+  "height": 16,
+  "sections": [
+    {
+      "name": "Cápsula estrellada",
+      "rows": [
+        "............................====",
+        "........................========",
+        "...........====................",
+        "....XXXXX.......................",
+        "................................",
+        "..P1....S........S.....S.........",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Jardín de impulsión",
+      "rows": [
+        "...S.............====........S",
+        "..................========......",
+        ".......................====.......",
+        "................................",
+        "....XXXXX.......................",
+        "......A...............B.....S....",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Rastro entre helechos",
+      "rows": [
+        "....S.............====.......S.",
+        "..................========......",
+        "......====.......................",
+        "................................",
+        "..............XXXXX.............",
+        "....A...........A..........C....S",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Raíces sobre la membrana",
+      "rows": [
+        "....S.......====................",
+        ".............========............",
+        "............................====..",
+        "................................",
+        "...XXXXX.........................",
+        "..C.........B.....A........S......",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Primer campamento humano",
+      "rows": [
+        "....S..............====..........",
+        "...................========.......",
+        ".......====.......................",
+        "................................",
+        "................XXXXX.............",
+        "K...S.............B.......A",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Cazadores de esporas",
+      "rows": [
+        "...S........====...............S.",
+        "...........========...............",
+        "........................====.......",
+        "................................",
+        ".....XXXXX.......................",
+        "..A...........C..............B....S",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Vigilia de la colmena",
+      "rows": [
+        "...S..............====...........",
+        "...................========........",
+        "......====.........................",
+        "................................",
+        ".............XXXXX................",
+        "K............A..............C....B",
+        "########################################",
+        "########################################"
+      ]
+    },
+    {
+      "name": "Salida de la selva",
+      "rows": [
+        "....S.........====................",
+        "..............========.............",
+        "........................====.......",
+        "................................",
+        "...XXXXX.........................",
+        "....B.................A.............O",
+        "########################################",
+        "########################################"
+      ]
+    }
+  ],
+  "enemies": { "A": "stalker", "B": "nexar-bat", "C": "spore-spitter" },
+  "signs": {
+    "1": { "keyboard": "CAPSULA ROTA", "touch": "CAPSULA ROTA" }
+  },
+  "objects": [
+    { "type": "boostPlant", "col": 17, "row": 13, "direction": "up-right", "force": 340 },
+    { "type": "movingPlatform", "col": 51, "row": 10, "width": 4, "axis": "x", "travel": 5, "speed": 36, "wait": 0.6 },
+    { "type": "boostPlant", "col": 112, "row": 13, "direction": "up", "force": 360 },
+    { "type": "organicNode", "id": "canopy-root", "col": 142, "row": 13, "mode": "toggle" },
+    { "type": "toxicFloor", "col": 150, "row": 13, "width": 4, "damage": 1, "interval": 0.8, "mode": "periodic", "on": 1.5, "off": 1.8, "warning": 0.8, "disabledBy": "canopy-root" },
+    { "type": "door", "id": "root-membrane", "col": 169, "row": 10, "height": 4, "opensWith": "canopy-root", "style": "membrane" },
+    { "type": "boostPlant", "col": 222, "row": 13, "direction": "up-left", "force": 340 }
+  ],
+  "story": {
+    "beats": [
+      { "id": "landing-arrival", "trigger": { "type": "start" }, "lines": [{ "speaker": "luma", "text": "Impacto confirmado. La cápsula quedó atrás; la señal humana apunta hacia el este." }] },
+      { "id": "safe-boost-lesson", "trigger": { "type": "zone", "col": 12, "row": 10, "width": 6, "height": 5 }, "lines": [{ "speaker": "luma", "text": "Esa planta acumula energía. Tócala para impulsarte; la dirección de sus hojas marca el lanzamiento." }] },
+      { "id": "ship-fragments", "trigger": { "type": "zone", "col": 52, "row": 11, "width": 5, "height": 4 }, "lines": [{ "speaker": "piezod", "text": "Metal de la cápsula. Alguien aterrizó aquí antes que nosotros." }] },
+      { "id": "human-trail", "trigger": { "type": "zone", "col": 121, "row": 11, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "He encontrado una huella humana bajo las esporas. No es un resto antiguo." }] },
+      { "id": "root-gate-hint", "trigger": { "type": "zone", "col": 136, "row": 11, "width": 5, "height": 4 }, "lines": [{ "speaker": "luma", "text": "El nodo alimenta la membrana y el suelo tóxico. Actívalo para despejar el paso." }] },
+      { "id": "landing-exit", "trigger": { "type": "zone", "col": 300, "row": 11, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "La señal continúa bajo tierra. Las cavernas deberían llevarnos hasta su origen." }] }
+    ]
+  }
+}

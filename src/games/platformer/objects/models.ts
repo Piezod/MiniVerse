@@ -162,6 +162,13 @@ export class SwitchModel {
     return changed;
   }
 
+  toggle(): boolean {
+    this.on = !this.on;
+    this.remaining = 0;
+    this.bus.set(this.id, this.on);
+    return this.on;
+  }
+
   update(dt: number): void {
     if (!this.on || this.duration <= 0) return;
     this.remaining -= Math.max(0, dt);

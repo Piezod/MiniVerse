@@ -35,6 +35,7 @@ const catalogs = buildCatalogs({
 });
 const BIOME_IDS = Object.keys(BIOMES);
 const EPISODES = ['c1-1-hangar', 'c1-2-corridors', 'c1-3-reactor', 'c1-4-omega'];
+const ALIEN_EPISODES = ['c2-1-landing', 'c2-2-caves', 'c2-3-lab', 'c2-4-queen'];
 
 let validatedEntries: LevelEntry[] | undefined;
 function realEntries(): LevelEntry[] {
@@ -77,7 +78,7 @@ describe('campaign.json: capítulo 1 (La estación fantasma)', () => {
     expect(chapters.map((c) => [c.id, c.status])).toEqual([
       ['prologue', 'ready'],
       ['station', 'ready'],
-      ['alien', 'planned'],
+      ['alien', 'ready'],
     ]);
   });
 
@@ -99,13 +100,13 @@ describe('campaign.json: capítulo 1 (La estación fantasma)', () => {
     expect(meta!.synopsis).toMatch(/LUMA/);
   });
 
-  it('conserva el capítulo 2 como Próximamente y el prólogo intacto', () => {
+  it('conserva el prólogo y mantiene el capítulo alien bloqueado por estación', () => {
     const { campaign } = realCampaign();
     const cards = chapterCards(campaign, (id) => BIOMES[id]?.name ?? id);
     expect(cards.map((c) => [c.id, c.stateLabel, c.selectable])).toEqual([
       ['prologue', 'Disponible', true],
       ['station', 'Disponible', true],
-      ['alien', 'Proximamente', false],
+      ['alien', 'Bloqueado', false],
     ]);
     expect(chapters[0].levels).toEqual(['forest-1', 'ruins-1', 'ice-1', 'volcano-1']);
   });
@@ -151,6 +152,10 @@ describe('el capítulo 1 publica Hangar, Pasillos y Reactor', () => {
         'assets/platformer/levels/chapter1/02-corridors.json',
         'assets/platformer/levels/chapter1/03-reactor.json',
         'assets/platformer/levels/chapter1/04-omega.json',
+        'assets/platformer/levels/chapter2/01-landing.json',
+        'assets/platformer/levels/chapter2/02-caves.json',
+        'assets/platformer/levels/chapter2/03-lab.json',
+        'assets/platformer/levels/chapter2/04-queen.json',
       ]);
       const entries = realEntries();
       const built = buildCampaign(readJson('campaign.json'), realContext(entries));
@@ -192,7 +197,7 @@ describe('el capítulo 1 publica Hangar, Pasillos y Reactor', () => {
 
   it('el registro carga los cuatro episodios y todos sus archivos existen', () => {
     const registry = readJson('levels/levels.json').levels as string[];
-    expect(registry).toHaveLength(8);
+    expect(registry).toHaveLength(12);
     expect(registry[4]).toBe('chapter1/01-hangar.json');
     expect(registry[5]).toBe('chapter1/02-corridors.json');
     expect(registry[6]).toBe('chapter1/03-reactor.json');
@@ -202,7 +207,8 @@ describe('el capítulo 1 publica Hangar, Pasillos y Reactor', () => {
   });
 
   it('los cuatro niveles originales mantienen id, nombre, bioma y estrellas', () => {
-    const entries = realEntries().filter((entry) => !EPISODES.includes(entry.id));
+    const originalIds = ['forest-1', 'ruins-1', 'ice-1', 'volcano-1'];
+    const entries = realEntries().filter((entry) => originalIds.includes(entry.id));
     expect(entries.map((e) => [e.id, e.biome, e.validation.parsed?.stars.length, e.validation.ok])).toEqual([
       ['forest-1', 'forest', 37, true],
       ['ruins-1', 'ruins', 19, true],
@@ -255,7 +261,7 @@ describe('cómo se activará el capítulo 1', () => {
   });
   const prologue = { id: 'prologue', name: 'P', order: 0, biome: null, levels: ['forest-1', 'ruins-1', 'ice-1', 'volcano-1'], unlock: null };
   const withFuture = (stationChapter: unknown, enemies: CampaignContext['enemies'] = { ...catalogs.enemies.enemies, 'omega-7': { boss: true } as never }) => {
-    const entries = [...realEntries().filter((entry) => !EPISODES.includes(entry.id)), ...futureEntries()];
+    const entries = [...realEntries().filter((entry) => !EPISODES.includes(entry.id) && !ALIEN_EPISODES.includes(entry.id)), ...futureEntries()];
     return buildCampaign({ chapters: [prologue, stationChapter] }, { ...realContext(entries), enemies });
   };
 
@@ -266,7 +272,7 @@ describe('cómo se activará el capítulo 1', () => {
   });
 
   it('se desbloquea al completar el prólogo y los episodios se abren en orden', () => {
-    const entries = [...realEntries().filter((entry) => !EPISODES.includes(entry.id)), ...futureEntries()];
+    const entries = [...realEntries().filter((entry) => !EPISODES.includes(entry.id) && !ALIEN_EPISODES.includes(entry.id)), ...futureEntries()];
     const levels = new LevelManager(entries, memoryStorage());
     const built = buildCampaign({ chapters: [prologue, ready()] }, { ...realContext(entries), enemies: { ...catalogs.enemies.enemies, 'omega-7': { boss: true } as never } });
     const campaign = new CampaignManager(built.chapters, levels, built.meta);
@@ -333,7 +339,7 @@ describe('validación de episodios y metadatos', () => {
     expect(messages([chapterJson({ plannedLevels: 1, episodes: [ep({ variant: 'sauna' })] })])).toMatch(/variante "sauna" no existe en el bioma "station" \(hangar, corridors, reactor, boss\)/);
     expect(messages([chapterJson({ biome: null, plannedLevels: 1, episodes: [ep()] })])).toMatch(/necesita un "biome" principal/);
     // an unknown biome (planned, not built yet) can't be checked, so its variants are accepted for now
-    expect(messages([chapterJson({ biome: 'alien', plannedLevels: 1, episodes: [ep({ variant: 'lair' })] })])).toBe('');
+    expect(messages([chapterJson({ biome: 'future-biome', plannedLevels: 1, episodes: [ep({ variant: 'lair' })] })])).toBe('');
   });
 
   it('los ids de episodio no pueden repetirse ni coincidir con un nivel ya registrado', () => {
@@ -369,7 +375,8 @@ describe('validación de episodios y metadatos', () => {
         { id: 'station', name: 'Estacion', order: 1, planned: true, plannedLevels: 4, biome: 'station', levels: [], unlock: { chapters: ['prologue'] } },
       ],
     };
-    const result = buildCampaign(old, realContext(realEntries().filter((entry) => !EPISODES.includes(entry.id))));
+    const alienEpisodes = ['c2-1-landing', 'c2-2-caves', 'c2-3-lab', 'c2-4-queen'];
+    const result = buildCampaign(old, realContext(realEntries().filter((entry) => !EPISODES.includes(entry.id) && !alienEpisodes.includes(entry.id))));
     expect(result.issues).toEqual([]);
     expect(result.meta).toBeNull();
     expect(result.chapters[1].episodes).toEqual([]);
@@ -760,7 +767,7 @@ describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
     expect(ending.lines.at(-1)!.text).toMatch(/Capítulo 2.*Próximamente/);
   });
 
-  it('desbloquea OMEGA solo con Reactor y persiste el cierre sin abrir el capítulo 2', () => {
+  it('desbloquea OMEGA solo con Reactor y al completarlo abre el capítulo alien publicado', () => {
     const storage = memoryStorage();
     const { campaign } = realCampaign(storage);
     expect(campaign.availableChapters().map((chapter) => chapter.id)).toEqual(['prologue', 'station']);
@@ -770,12 +777,12 @@ describe('Protocolo OMEGA: episodio y cierre de capítulo', () => {
     expect(campaign.complete('c1-3-reactor', { stars: 0, total: 64 }).next?.id).toBe('c1-4-omega');
     expect(campaign.isLevelUnlocked('c1-4-omega')).toBe(true);
     const done = campaign.complete('c1-4-omega', { stars: 4, total: parsed.stars.length });
-    expect(done).toMatchObject({ chapterCompleted: true, next: undefined, unlockedChapters: [] });
+    expect(done).toMatchObject({ chapterCompleted: true, next: undefined, unlockedChapters: [expect.objectContaining({ id: 'alien' })] });
     const restored = realCampaign(storage).campaign;
     expect(restored.progressOf('station')).toMatchObject({ completed: 4, total: 4, isCompleted: true });
     expect(restored.progressOfLevel('c1-4-omega')?.stars).toBe(4);
-    expect(restored.chapter('alien')?.status).toBe('planned');
-    expect(restored.isChapterUnlocked('alien')).toBe(false);
+    expect(restored.chapter('alien')?.status).toBe('ready');
+    expect(restored.isChapterUnlocked('alien')).toBe(true);
     expect(restored.earnedRewards()).toEqual([]);
     expect(restored.progressOf('prologue').completed).toBe(0);
   });
@@ -995,7 +1002,7 @@ describe('bioma de la estación y sus variantes', () => {
     expect(theme.signFrame).toBe(DECO.console);
     expect(BIOMES.forest.signFrame).toBe(14);
     expect(DECO.bush).toBe(15);
-    expect(DECO_FRAME_COUNT).toBe(22);
+    expect(DECO_FRAME_COUNT).toBe(24);
     expect(STATION_DEFINITION.variants!.hangar.files).toBeUndefined();
   });
 

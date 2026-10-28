@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OmegaController, omegaPhase } from '../src/games/platformer/enemies/OmegaController';
+import { SwarmQueenController } from '../src/games/platformer/enemies/SwarmQueenController';
 import { validateObjects } from '../src/games/platformer/objects/validate';
 import { validateStory } from '../src/games/platformer/story/validate';
 
@@ -7,6 +8,15 @@ const advance = (controller: OmegaController, seconds: number, fraction = 1): st
   const attacks: string[] = [];
   for (let frame = 0; frame < Math.ceil(seconds * 100); frame++) {
     const attack = controller.update(0.01, fraction, true);
+    if (attack) attacks.push(attack);
+  }
+  return attacks;
+};
+
+const advanceQueen = (controller: SwarmQueenController, seconds: number, fraction = 1, nodes = false): string[] => {
+  const attacks: string[] = [];
+  for (let frame = 0; frame < Math.ceil(seconds * 100); frame++) {
+    const attack = controller.update(0.01, fraction, true, nodes);
     if (attack) attacks.push(attack);
   }
   return attacks;
@@ -102,5 +112,50 @@ describe('OMEGA: máquina de estados de tres fases', () => {
     expect(controller.contactActive).toBe(false);
     controller.update(0, 0.35, true);
     expect(controller.state).toBe('transition');
+  });
+});
+
+describe('Reina del Enjambre: fases, nodos y ataques', () => {
+  it('avisa antes de atacar y solo abre la ventana durante recuperación', () => {
+    const queen = new SwarmQueenController();
+    expect(queen.update(1, 1, false, false)).toBeNull();
+    expect(queen.state).toBe('dormant');
+    queen.update(0, 1, true, false);
+    expect(queen.state).toBe('transition');
+    advanceQueen(queen, 1.41);
+    expect(queen.state).toBe('telegraph');
+    expect(queen.vulnerable).toBe(false);
+    expect(advanceQueen(queen, 1.09)).toEqual(['spores']);
+    expect(queen.state).toBe('attack');
+    advanceQueen(queen, 0.26);
+    expect(queen.state).toBe('recover');
+    expect(queen.vulnerable).toBe(true);
+  });
+
+  it('exige nodos en fase 2+, limita apoyos y reinicia al suspender', () => {
+    const queen = new SwarmQueenController();
+    queen.update(0, 1, true, false);
+    queen.update(0.01, 0.7, true, false);
+    expect(queen.phase).toBe(2);
+    expect(queen.isProtected).toBe(true);
+    expect(queen.vulnerable).toBe(false);
+    expect([queen.takeSupportSlot(), queen.takeSupportSlot(), queen.takeSupportSlot()]).toEqual([true, true, false]);
+    expect(advanceQueen(queen, 16, 0.7)).toEqual(expect.arrayContaining(['spores', 'toxic', 'summon', 'dive']));
+    queen.update(0.01, 0.7, true, true);
+    expect(queen.isProtected).toBe(false);
+    expect(queen.vulnerable).toBe(true);
+    const phaseTwoTelegraph = queen.telegraphDuration;
+    queen.update(0.01, 0.35, true, false);
+    expect(queen.phase).toBe(3);
+    expect(queen.isProtected).toBe(true);
+    expect(queen.telegraphDuration).toBeLessThan(phaseTwoTelegraph);
+    queen.suspend();
+    expect(queen.state).toBe('dormant');
+    queen.update(0.01, 1, true, false);
+    expect(queen.phase).toBe(1);
+    expect(queen.state).toBe('transition');
+    queen.defeat();
+    expect(queen.update(10, 0, true, false)).toBeNull();
+    expect(queen.state).toBe('dead');
   });
 });

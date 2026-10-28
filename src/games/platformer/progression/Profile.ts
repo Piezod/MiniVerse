@@ -10,6 +10,7 @@
 import type { AbilityCatalog, AbilityDef } from '../abilities/AbilityCatalog';
 import { ABILITY_BUTTONS, type AbilityButton } from '../controls';
 import type { ProgressStorage } from '../level/LevelManager';
+import { STANDARD_ACCESS, type AccessPolicy } from './accessPolicy';
 
 export const PROFILE_VERSION = 2;
 /** Weapon slots: F (primary) and R (secondary). */
@@ -78,9 +79,18 @@ export class Profile {
   constructor(
     private readonly catalog: AbilityCatalog,
     private readonly storage: ProgressStorage,
+    private readonly access: AccessPolicy = STANDARD_ACCESS,
   ) {
     const stored = storage.load();
     this.data = this.sanitize(stored);
+    if (stored === null && access.freeWeapons) {
+      for (const def of Object.values(catalog.abilities)) {
+        if (def.available && def.slot === 'active' && def.defaultSlot && this.data.weapons[def.defaultSlot] === null) {
+          this.data.weapons[def.defaultSlot] = def.id;
+        }
+      }
+      this.save();
+    }
     // Persist migrated saves immediately so the old format is never read again.
     if (stored !== null && this.storedVersion(stored) < PROFILE_VERSION) this.save();
   }
@@ -128,7 +138,9 @@ export class Profile {
   }
 
   levelOf(abilityId: string): number {
-    return this.data.owned[abilityId] ?? 0;
+    const def = this.catalog.abilities[abilityId];
+    const base = this.access.freeWeapons && def?.available && def.slot === 'active' ? 1 : 0;
+    return Math.max(this.data.owned[abilityId] ?? 0, base);
   }
 
   canPurchase(abilityId: string, isLevelCompleted: (levelId: string) => boolean): PurchaseCheck {
@@ -138,7 +150,7 @@ export class Profile {
     const current = this.levelOf(abilityId);
     if (current >= def.levels.length) return { ok: false, reason: 'maxed' };
     const cost = def.levels[current].cost;
-    if (def.requires && !isLevelCompleted(def.requires)) return { ok: false, reason: 'locked', cost };
+    if (def.requires && !(this.access.freeWeapons && def.slot === 'active') && !isLevelCompleted(def.requires)) return { ok: false, reason: 'locked', cost };
     if (this.balance < cost) return { ok: false, reason: 'funds', cost };
     return { ok: true, cost, nextLevel: current + 1 };
   }
@@ -270,7 +282,7 @@ export class Profile {
     data.spent = Math.min(spent, this.earnedOf(data));
     const usable = (id: unknown, slot: AbilityDef['slot']): id is string => {
       const def = typeof id === 'string' ? this.catalog.abilities[id] : undefined;
-      return !!def && def.slot === slot && def.available && !!data.owned[id as string];
+      return !!def && def.slot === slot && def.available && (!!data.owned[id as string] || (this.access.freeWeapons && slot === 'active'));
     };
     if (Array.isArray(parsed.passives)) data.passives = [...new Set(parsed.passives.filter((id) => usable(id, 'passive')))];
     if (isRecord(parsed.weapons)) {

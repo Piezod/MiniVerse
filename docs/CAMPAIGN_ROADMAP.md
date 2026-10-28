@@ -260,7 +260,7 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
 
 ### 0.6f Integración y revisión del capítulo 1
 
-- Cuatro JSON registrados, variantes station validadas, desbloqueo secuencial y progreso v2 conservado.
+- Cuatro JSON registrados, variantes station validadas, reglas de desbloqueo reversibles y progreso v2 conservado.
 - Prólogo y capítulo 1 disponibles desde una partida nueva, sin completar niveles automáticamente.
 - Objetivos de dificultad: Hangar 2/10, Pasillos 4/10, Reactor 7/10, OMEGA 9/10; no son métricas verificadas.
 - Se prueban referencias de objetos, saltos sin habilidades, checkpoints seguros y controles antes de sus puertas.
@@ -270,6 +270,22 @@ acceso en local, staging y producción. El capítulo declara cuatro **episodios*
   y título de niveles acotado para no solaparse con navegación o tienda.
 - Corregido el cierre de escena cuando Phaser ya ha destruido los grupos de enemigos o proyectiles;
   el reinicio del encuentro no depende del orden de destrucción de esos recursos.
+
+### 0.6g Acceso libre para experimentar
+
+- `src/games/platformer/progression/accessPolicy.ts` centraliza `PLATFORMER_ACCESS`, aplicado por los cargadores
+  de perfil y campaña en todos los entornos. `freeWeapons: true` ofrece las armas activas funcionales a nivel 1;
+  `freeLevels: true` permite elegir los ocho niveles publicados, sin completar requisitos previos.
+- Rayo, Lanzallamas y Cañón láser están disponibles sin compra. Las armas no implementadas continúan excluidas;
+  Propulsión conserva su compra y mejoras normales. F/R se equipan desde la tienda existente y se guardan,
+  incluidas las ranuras vacías. Una partida nueva empieza con Rayo en F y Lanzallamas en R.
+- No se añaden compras, estrellas ni niveles completados ficticios. Las mejoras siguen costando estrellas,
+  respetan los niveles ya comprados y persisten igual que antes. Los capítulos futuros siguen como Próximamente.
+- Para recuperar los desbloqueos originales, poner ambas opciones de `PLATFORMER_ACCESS` a `false`.
+  El acceso gratuito no se registra como propiedad: al desactivarlo solo quedan las compras reales y las mejoras
+  pagadas, con las reglas secuenciales originales. No hace falta migrar ni borrar partidas.
+- Las descripciones de desbloqueo anteriores documentan el modo estándar. Los tests cubren ambos modos,
+  disponibilidad inicial, selección directa, equipamiento, persistencia, mejoras y reversión de la política.
 
 El capítulo 2 no se implementa en esta fase.
 

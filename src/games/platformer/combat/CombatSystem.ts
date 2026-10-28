@@ -3,7 +3,7 @@ import { playSound } from '../../../core/audio/Sfx';
 import { AUDIO, PROJECTILE_FRAME, TEX } from '../assets/manifest';
 import { Enemy, type EnemyHost } from '../entities/Enemy';
 import type { Player } from '../entities/Player';
-import type { EnemyDef } from '../enemies/EnemyCatalog';
+import { enemyActiveSignals, type EnemyDef } from '../enemies/EnemyCatalog';
 import { DEPTH } from '../view/ParallaxBackground';
 import type { PlatformerFx } from '../view/PlatformerFx';
 import { beamTargets } from './beam';
@@ -17,8 +17,12 @@ export interface CombatCallbacks {
   /** Every hit on the player: contact (form 'contact') or enemy projectiles (form 'projectile'). */
   damagePlayer(hit: Hit & { fromX: number }): void;
   enemyKilled(enemy: Enemy): void;
+  enemySignal?(id: string, active: boolean): void;
   bossEngaged?(enemy: Enemy): boolean;
   bossHazards?(enemy: Enemy, active: boolean): void;
+  bossNodesActive?(enemy: Enemy): boolean;
+  bossNodesReset?(enemy: Enemy): void;
+  bossSupport?(enemy: Enemy): void;
 }
 
 export interface CombatRules {
@@ -45,6 +49,7 @@ const STOMP_GRACE_MS = 250;
  */
 export class CombatSystem implements EnemyHost {
   readonly enemies: Phaser.GameObjects.Group;
+  private readonly supportEnemies = new Set<Enemy>();
   private readonly playerShots: Phaser.Physics.Arcade.Group;
   private readonly enemyShots: Phaser.Physics.Arcade.Group;
   private lastStomp = -Infinity;
@@ -96,6 +101,18 @@ export class CombatSystem implements EnemyHost {
     this.callbacks.bossHazards?.(enemy, active);
   }
 
+  bossNodesActive(enemy: Enemy): boolean {
+    return this.callbacks.bossNodesActive?.(enemy) ?? false;
+  }
+
+  bossNodesReset(enemy: Enemy): void {
+    this.callbacks.bossNodesReset?.(enemy);
+  }
+
+  bossSupport(enemy: Enemy): void {
+    this.callbacks.bossSupport?.(enemy);
+  }
+
   clearBossShots(enemy: Enemy): void {
     if (!this.enemyShots.scene) return;
     for (const shot of [...this.enemyShots.getChildren()] as Phaser.Physics.Arcade.Sprite[]) {
@@ -105,15 +122,33 @@ export class CombatSystem implements EnemyHost {
 
   suspendBosses(reset = false): void {
     if (!this.enemies.scene) return;
-    for (const enemy of this.enemies.getChildren() as Enemy[]) enemy.suspendOmega(reset);
+    this.clearBossSupport();
+    for (const enemy of this.enemies.getChildren() as Enemy[]) enemy.suspendBoss(reset);
+  }
+
+  clearBossSupport(): void {
+    for (const enemy of this.supportEnemies) if (enemy.isAlive) enemy.kill();
+    this.supportEnemies.clear();
+  }
+
+  spawnQueenSupport(queen: Enemy, definitions: readonly EnemyDef[]): void {
+    const active = [...this.supportEnemies].filter((enemy) => enemy.active && enemy.isAlive);
+    if (active.length >= 4 || definitions.length === 0) return;
+    const offset = active.length % 2 === 0 ? -34 : 34;
+    const support = this.spawnEnemy(definitions[active.length % definitions.length], queen.x + offset, queen.y);
+    this.supportEnemies.add(support);
+    support.once(Phaser.GameObjects.Events.DESTROY, () => this.supportEnemies.delete(support));
   }
 
   enemyShoot(enemy: Enemy, vx: number, vy: number, damage: number): void {
     const energy = enemy.def.attack?.projectile === 'energy';
-    const shot = this.enemyShots.create(enemy.x + Math.sign(vx) * 6, enemy.y - enemy.displayHeight / 2, TEX.projectiles, energy ? PROJECTILE_FRAME.beam : PROJECTILE_FRAME.fireball) as Phaser.Physics.Arcade.Sprite;
+    const spore = enemy.def.attack?.projectile === 'spore';
+    const texture = spore ? TEX.spore : TEX.projectiles;
+    const frame = spore ? 0 : energy ? PROJECTILE_FRAME.beam : PROJECTILE_FRAME.fireball;
+    const shot = this.enemyShots.create(enemy.x + Math.sign(vx) * 6, enemy.y - enemy.displayHeight / 2, texture, frame) as Phaser.Physics.Arcade.Sprite;
     shot.setDepth(DEPTH.enemies).setData('damage', damage).setData('element', enemy.def.attack?.element ?? enemy.def.element).setData('startX', shot.x).setData('range', 400);
     shot.setData('owner', enemy);
-    shot.play(energy ? 'platformer.projectile.beam' : 'platformer.projectile.fireball');
+    shot.play(spore ? 'platformer.projectile.spore' : energy ? 'platformer.projectile.beam' : 'platformer.projectile.fireball');
     if (energy) shot.setTint(0x7fe3ff);
     shot.body!.setSize(6, 6);
     shot.setVelocity(vx, vy);
@@ -121,8 +156,17 @@ export class CombatSystem implements EnemyHost {
   }
 
   enemyDied(enemy: Enemy): void {
+    this.syncEnemySignals();
     this.fx.enemyDefeated(enemy.x, enemy.y - enemy.displayHeight / 2);
     this.callbacks.enemyKilled(enemy);
+  }
+
+  syncEnemySignals(enabled = true): void {
+    const enemies = this.enemies.getChildren() as Enemy[];
+    const signals = enemyActiveSignals(enemies.map((enemy) => enemy.def));
+    for (const signal of signals) {
+      this.callbacks.enemySignal?.(signal, enabled && enemies.some((enemy) => enemy.isAlive && enemy.def.activeSignal === signal));
+    }
   }
 
   firePlayerShot(shot: PlayerShot): void {

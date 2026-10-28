@@ -51,6 +51,30 @@ export function emitterTexture(scene: Phaser.Scene): string {
 
 export type ElectricFrame = 'off' | 'warning' | 'on' | 'on2';
 
+export type ToxicFrame = 'off' | 'warning' | 'on' | 'on2';
+
+/** Alien toxic ground plate, with a bright warning edge and pulsing spore pools. */
+export function toxicTexture(scene: Phaser.Scene, frame: ToxicFrame): string {
+  return ensure(scene, `toxic.${frame}`, TILE, TILE, (ctx) => {
+    rect(ctx, PALETTE.outline, 0, 9, TILE, 7);
+    rect(ctx, '#315044', 1, 10, TILE - 2, 5);
+    rect(ctx, '#497653', 2, 10, TILE - 4, 2);
+    if (frame === 'warning') {
+      rect(ctx, '#b8e889', 2, 8, 3, 2);
+      rect(ctx, '#e2ffad', 7, 7, 2, 3);
+      rect(ctx, '#b8e889', 12, 8, 2, 2);
+    } else if (frame === 'on' || frame === 'on2') {
+      const spots = frame === 'on' ? [[3, 7], [5, 5], [8, 7], [11, 6], [13, 8]] : [[2, 6], [6, 8], [9, 5], [12, 7], [14, 6]];
+      for (const [x, y] of spots) rect(ctx, '#8fc778', x, y, 2, 3);
+      rect(ctx, '#c6ff8c', frame === 'on' ? 6 : 10, 5, 2, 2);
+      rect(ctx, '#e2ffad', frame === 'on' ? 7 : 11, 5, 1, 1);
+    } else {
+      rect(ctx, '#6d9d63', 3, 9, 3, 1);
+      rect(ctx, '#6d9d63', 10, 9, 4, 1);
+    }
+  });
+}
+
 /** One tile of an electrified floor plate, drawn in the bottom 6 px of the tile. */
 export function electricTexture(scene: Phaser.Scene, frame: ElectricFrame): string {
   return ensure(scene, `electric.${frame}`, TILE, TILE, (ctx) => {
@@ -89,10 +113,44 @@ export function switchTexture(scene: Phaser.Scene, on: boolean): string {
   });
 }
 
+/** Alien launch plant: a closed bud that opens into a bright spring pad. */
+export function boostPlantTexture(scene: Phaser.Scene, open: boolean): string {
+  return ensure(scene, `boost-plant.${open ? 'open' : 'closed'}`, TILE, TILE, (ctx) => {
+    rect(ctx, PALETTE.outline, 1, 11, 14, 5);
+    rect(ctx, PALETTE.moss, 2, 10, 12, 4);
+    rect(ctx, PALETTE.mossLight, 3, 10, 10, 1);
+    rect(ctx, PALETTE.glowDark, 6, 8, 4, 4);
+    if (open) {
+      rect(ctx, PALETTE.glow, 6, 5, 4, 5);
+      rect(ctx, PALETTE.white, 7, 5, 2, 2);
+      rect(ctx, PALETTE.mossLight, 2, 6, 4, 2);
+      rect(ctx, PALETTE.mossLight, 10, 6, 4, 2);
+      rect(ctx, PALETTE.glow, 1, 4, 2, 1);
+      rect(ctx, PALETTE.glow, 13, 4, 2, 1);
+    } else {
+      rect(ctx, PALETTE.mossLight, 5, 5, 6, 4);
+      rect(ctx, PALETTE.glow, 7, 6, 2, 2);
+      rect(ctx, PALETTE.moss, 3, 7, 3, 3);
+      rect(ctx, PALETTE.moss, 10, 7, 3, 3);
+    }
+  });
+}
+
 /** One-tile-wide door of `tiles` tiles: metal panels with hazard stripes on the edges. */
-export function doorTexture(scene: Phaser.Scene, tiles: number): string {
-  return ensure(scene, `door.${tiles}`, TILE, tiles * TILE, (ctx) => {
+export function doorTexture(scene: Phaser.Scene, tiles: number, style: 'metal' | 'membrane' = 'metal'): string {
+  return ensure(scene, `door.${style}.${tiles}`, TILE, tiles * TILE, (ctx) => {
     const h = tiles * TILE;
+    if (style === 'membrane') {
+      rect(ctx, PALETTE.outline, 2, 0, 12, h);
+      rect(ctx, '#315044', 4, 0, 8, h);
+      rect(ctx, '#497653', 5, 0, 6, h);
+      for (let y = 4; y < h; y += 12) {
+        rect(ctx, '#6d9d63', 3, y, 10, 2);
+        rect(ctx, '#8fc778', 5, y + 3, 6, 1);
+        rect(ctx, '#b8e889', 7, y + 5, 2, 2);
+      }
+      return;
+    }
     rect(ctx, PALETTE.outline, 3, 0, 10, h);
     rect(ctx, PALETTE.metal, 4, 0, 8, h);
     rect(ctx, PALETTE.metalLight, 4, 0, 2, h);
@@ -103,6 +161,25 @@ export function doorTexture(scene: Phaser.Scene, tiles: number): string {
       rect(ctx, PALETTE.gold, 6, y + 2, 4, 3);
     }
     for (let y = 0; y < h; y += 4) rect(ctx, y % 8 === 0 ? PALETTE.gold : PALETTE.outline, 3, y, 1, 4);
+  });
+}
+
+/** Organic signal node: a dormant seed that glows when its signal is on. */
+export function organicNodeTexture(scene: Phaser.Scene, on: boolean): string {
+  return ensure(scene, `organic-node.${on ? 'on' : 'off'}`, TILE, TILE, (ctx) => {
+    rect(ctx, PALETTE.outline, 3, 3, 10, 12);
+    rect(ctx, '#315044', 4, 4, 8, 10);
+    rect(ctx, '#497653', 5, 4, 6, 8);
+    rect(ctx, '#6d9d63', 6, 5, 4, 6);
+    rect(ctx, on ? '#c6ff8c' : '#8fc778', 7, 6, 2, 4);
+    rect(ctx, on ? '#e2ffad' : '#497653', 7, 7, 1, 2);
+    rect(ctx, '#315044', 7, 14, 2, 2);
+    rect(ctx, '#6d9d63', 1, 9, 3, 1);
+    rect(ctx, '#6d9d63', 12, 9, 3, 1);
+    if (on) {
+      rect(ctx, '#b8e889', 6, 2, 4, 1);
+      rect(ctx, '#b8e889', 6, 13, 4, 1);
+    }
   });
 }
 

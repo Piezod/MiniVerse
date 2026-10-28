@@ -3,7 +3,7 @@
  * Besides structure, it simulates the player's real jump physics over the tile grid to find every
  * reachable spot, so unreachable goals and impossible jumps are reported before playing.
  */
-import { type EnemyDef, isFlying } from '../enemies/EnemyCatalog';
+import { enemyActiveSignals, type EnemyDef, isFlying } from '../enemies/EnemyCatalog';
 import { validateObjects } from '../objects/validate';
 import { withObjectSupport } from '../objects/reachSupport';
 import { validateStory } from '../story/validate';
@@ -124,8 +124,24 @@ export function validateLevel(
   const storyCheck = validateStory(level.story, { width: parsed.width, height: parsed.height });
   const bossCheck = validateBossEncounter(level.bossEncounter, parsed, storyCheck.beats, knownEnemies);
   for (const issue of bossCheck.issues) error(issue);
-  const objectCheck = validateObjects(level.objects, { width: parsed.width, height: parsed.height, externalSignals: bossCheck.encounter ? Object.values(bossCheck.encounter.signals) : [] });
-  for (const issue of objectCheck.issues) (issue.severity === 'error' ? error : warn)(`objects[${issue.index}]: ${issue.message}`);
+  const activeSignals = enemyActiveSignals(parsed.enemies.flatMap((placement) => {
+    const enemy = knownEnemies?.[placement.type];
+    return enemy ? [enemy] : [];
+  }));
+  const objectCheck = validateObjects(level.objects, {
+    width: parsed.width,
+    height: level.height,
+    externalSignals: [...activeSignals, ...(bossCheck.encounter ? Object.values(bossCheck.encounter.signals) : [])],
+  });
+  const bossNodeSignals = new Set(bossCheck.encounter?.vulnerableBy ?? []);
+  for (const signal of bossNodeSignals) {
+    if (!objectCheck.objects.some((object) => object.type === 'organicNode' && object.id === signal)) error(`bossEncounter.vulnerableBy: no existe un nodo orgánico con señal "${signal}"`);
+  }
+  for (const issue of objectCheck.issues) {
+    const bossNodeUse = issue.severity === 'warning' && issue.message.includes('ningún objeto lo usa') && [...bossNodeSignals].some((signal) => issue.message.includes(`"${signal}"`));
+    if (bossNodeUse) continue;
+    (issue.severity === 'error' ? error : warn)(`objects[${issue.index}]: ${issue.message}`);
+  }
   for (const issue of storyCheck.issues) error(`story${issue.index >= 0 ? `[${issue.index}]` : ''}: ${issue.message}`);
   if (issues.some((i) => i.severity === 'error') || !parsed.spawn) return { ok: false, issues, level, parsed };
 

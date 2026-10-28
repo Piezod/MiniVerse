@@ -1,0 +1,170 @@
+{
+  "id": "c2-3-lab",
+  "name": "El laboratorio de la colmena",
+  "biome": "alien",
+  "variant": "lab",
+  "height": 16,
+  "sections": [
+    {
+      "name": "Vestíbulo de contención",
+      "rows": [
+        "............................====........",
+        ".....................========...........",
+        "......====..............................",
+        "........................................",
+        "....XXXXX...............................",
+        ".P.......A.................F.............",
+        "#########################################",
+        "#########################################"
+      ]
+    },
+    {
+      "name": "Conductos de bioenergía",
+      "rows": [
+        "...............====.......................",
+        "...............========..................",
+        "...........====..........................",
+        "........................................",
+        ".................XXXXX..................",
+        "...L.....C........1......A...............",
+        "#########################################",
+        "#########################################"
+      ]
+    },
+    {
+      "name": "Galería de vigilancia",
+      "rows": [
+        ".....S...........====...............S....",
+        "..................========.................",
+        "........====...............................",
+        "........................................",
+        ".....XXXXX...................XXXXX.......",
+        "...B...T.....G...........S......L...........",
+        "############################################",
+        "############################################"
+      ]
+    },
+    {
+      "name": "Cámaras de experimentación",
+      "rows": [
+        "....S..............====...................",
+        "...................========................",
+        ".......====.................................",
+        "........................................",
+        "...........XXXXX...................XXXXX...",
+        "...B...T.....G.....2.....S......L...........",
+        "############################################",
+        "############################################"
+      ]
+    },
+    {
+      "name": "Archivo de la Forja",
+      "rows": [
+        ".....S..............====..............S....",
+        "....................========.................",
+        "..........====...............................",
+        "........................................",
+        "....XXXXX......................XXXXX........",
+        "K...D.............F.........................",
+        "#############################################",
+        "#############################################"
+      ]
+    },
+    {
+      "name": "Reactor de la colmena",
+      "rows": [
+        "....S.............====.................S...",
+        "..................========..................",
+        "......====..............................",
+        "........................................",
+        "........XXXXX...................XXXXX......",
+        "..U...B..................G.....R............",
+        "############################################",
+        "############################################"
+      ]
+    },
+    {
+      "name": "Red neuronal colectiva",
+      "rows": [
+        "S...........====.............====...........S",
+        "...........========.........========...........",
+        "....====.................................",
+        "........................................",
+        ".....XXXXX..................XXXXX........",
+        "K..T...D.........A.......3.......L..........",
+        "###############################################",
+        "###############################################"
+      ]
+    },
+    {
+      "name": "Protocolo de evacuación",
+      "rows": [
+        "....S.............====..............S....",
+        "..................========.................",
+        ".........====..............................",
+        "........................................",
+        "..........XXXXX...................XXXXX....",
+        "...C....B.....U...........D...................",
+        "##############################################",
+        "##############################################"
+      ]
+    },
+    {
+      "name": "Acceso al núcleo central",
+      "rows": [
+        ".....S.............====.....................",
+        "...................========..................",
+        ".......====.................................",
+        "........................................",
+        "...XXXXX....................XXXXX...........",
+        "K.G...F...A.........B.........................O",
+        "###############################################",
+        "###############################################"
+      ]
+    }
+  ],
+  "enemies": {
+    "A": "stalker",
+    "B": "bio-technician",
+    "C": "auto-turret",
+    "D": "drone-sentinel",
+    "F": "nexar-bat",
+    "G": "armored-guardian",
+    "L": "spore-spitter",
+    "R": "auto-turret-right",
+    "T": "nexar-technician",
+    "U": "organic-guardian"
+  },
+  "signs": {
+    "1": { "keyboard": "ENERGÍA CELULAR", "touch": "ENERGÍA CELULAR" },
+    "2": { "keyboard": "ARCHIVO NEXAR", "touch": "ARCHIVO NEXAR" },
+    "3": { "keyboard": "RED SINÁPTICA", "touch": "RED SINÁPTICA" }
+  },
+  "objects": [
+    { "type": "movingPlatform", "col": 20, "row": 9, "width": 4, "axis": "y", "travel": -4, "speed": 32, "wait": 0.8 },
+    { "type": "toxicFloor", "col": 53, "row": 13, "width": 5, "damage": 1, "interval": 0.9, "mode": "periodic", "on": 1.5, "off": 1.6, "warning": 0.8 },
+    { "type": "laser", "id": "lab-beam-a", "col": 91, "row": 9, "orientation": "vertical", "length": 4, "damage": 1, "mode": "periodic", "on": 1.4, "off": 1.4, "warning": 0.8 },
+    { "type": "movingPlatform", "col": 99, "row": 9, "width": 4, "axis": "x", "travel": 6, "speed": 36, "wait": 0.7 },
+    { "type": "organicNode", "id": "lab-power", "col": 138, "row": 13, "mode": "toggle" },
+    { "type": "toxicFloor", "col": 142, "row": 13, "width": 5, "damage": 1, "interval": 0.8, "mode": "periodic", "on": 1.5, "off": 1.5, "warning": 0.8, "disabledBy": "lab-power" },
+    { "type": "door", "id": "lab-membrane", "col": 158, "row": 10, "height": 4, "opensWith": "lab-power", "style": "membrane" },
+    { "type": "door", "id": "lab-bulkhead", "col": 175, "row": 10, "height": 4, "opensWith": "lab-power" },
+    { "type": "movingPlatform", "col": 185, "row": 8, "width": 4, "axis": "y", "travel": 4, "speed": 30, "wait": 0.8 },
+    { "type": "toxicFloor", "col": 224, "row": 13, "width": 5, "damage": 1, "interval": 0.8, "mode": "periodic", "on": 1.4, "off": 1.6, "warning": 0.9, "enabledBy": "bio-hive" },
+    { "type": "organicNode", "id": "neural-relay", "col": 260, "row": 13, "mode": "toggle" },
+    { "type": "laser", "id": "hive-laser", "col": 276, "row": 9, "orientation": "vertical", "length": 4, "damage": 1, "mode": "periodic", "on": 1.5, "off": 1.5, "warning": 0.8, "disabledBy": "neural-relay" },
+    { "type": "door", "id": "hive-membrane", "col": 298, "row": 10, "height": 4, "opensWith": "neural-relay", "style": "membrane" },
+    { "type": "movingPlatform", "col": 310, "row": 8, "width": 4, "axis": "x", "travel": 5, "speed": 34, "wait": 0.8 }
+  ],
+  "story": {
+    "beats": [
+      { "id": "lab-arrival", "trigger": { "type": "start" }, "lines": [{ "speaker": "luma", "text": "La instalación está viva por dentro. La señal de la selva converge aquí." }] },
+      { "id": "cellular-power", "trigger": { "type": "zone", "col": 43, "row": 11, "width": 6, "height": 4 }, "lines": [{ "speaker": "luma", "text": "Las cápsulas no son de incubación. Sus signos vitales alimentan los conductos de energía." }] },
+      { "id": "capsule-record", "trigger": { "type": "zone", "col": 124, "row": 11, "width": 7, "height": 4 }, "lines": [{ "speaker": "transmision", "text": "ARCHIVO NEXAR: extracción neuronal estable. El huésped humano mantiene activo el reactor orgánico." }] },
+      { "id": "collective-network", "trigger": { "type": "zone", "col": 184, "row": 11, "width": 7, "height": 4 }, "lines": [{ "speaker": "luma", "text": "La red conecta a las criaturas con las máquinas. No son órdenes aisladas: comparten una sola inteligencia." }] },
+      { "id": "forge-transfer", "trigger": { "type": "zone", "col": 220, "row": 11, "width": 7, "height": 4 }, "lines": [{ "speaker": "transmision", "text": "Traslado confirmado: supervivientes enviados a La Forja. El transporte parte al completar la carga." }] },
+      { "id": "piezod-project-file", "trigger": { "type": "zone", "col": 264, "row": 11, "width": 7, "height": 4 }, "lines": [{ "speaker": "luma", "text": "Ese registro contiene tu identificador. El proyecto PIEZOD estuvo vinculado a esta instalación." }, { "speaker": "luma", "text": "No recuerdo ese archivo. Hay huecos en mis registros... sigamos, PIEZOD." }] },
+      { "id": "queen-approach", "trigger": { "type": "zone", "col": 321, "row": 11, "width": 7, "height": 4 }, "lines": [{ "speaker": "luma", "text": "El núcleo transmite desde más abajo. La Reina debe estar protegiendo el centro de la red." }] }
+    ]
+  }
+}

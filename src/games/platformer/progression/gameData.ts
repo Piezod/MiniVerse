@@ -7,6 +7,7 @@ import { buildStatusCatalog, type StatusCatalog } from '../combat/status';
 import { buildEnemyCatalog, type EnemyCatalog } from '../enemies/EnemyCatalog';
 import { localProgressStorage } from '../level/LevelManager';
 import { Profile } from './Profile';
+import { PLATFORMER_ACCESS } from './accessPolicy';
 
 /** Gameplay configuration files in public/assets/platformer/ (editable without touching code). */
 const FILES = {
@@ -63,7 +64,7 @@ export function buildGameData(scene: Phaser.Scene): GameData {
     abilities: json(FILES.abilities),
   });
   for (const issue of issues) console.error(issue);
-  data = { ...catalogs, profile: new Profile(catalogs.abilities, localProgressStorage('miniverse.platformer.profile')) };
+  data = { ...catalogs, profile: new Profile(catalogs.abilities, localProgressStorage('miniverse.platformer.profile'), PLATFORMER_ACCESS) };
   return data;
 }
 

@@ -9,7 +9,7 @@ import {
   drawUiFrame,
   drawWalkerFrame,
 } from './actors';
-import { drawAbilityIcon, drawBatFrame, drawDroneFrame, drawElectricDroneFrame, drawGolemFrame, drawGuardianFrame, drawOmegaFrame, drawProjectileFrame, drawSentinelFrame, drawSpitterFrame, drawTechnicianFrame, drawTurretFrame } from './combatArt';
+import { drawAbilityIcon, drawBatFrame, drawBioTechnicianFrame, drawDroneFrame, drawElectricDroneFrame, drawGolemFrame, drawGuardianFrame, drawNexarBatFrame, drawOmegaFrame, drawOrganicGuardianFrame, drawProjectileFrame, drawSentinelFrame, drawSpitterFrame, drawSporeProjectileFrame, drawSporeSpitterFrame, drawStalkerFrame, drawSwarmQueenFrame, drawTechnicianFrame, drawTurretFrame } from './combatArt';
 
 /**
  * World-independent assets (characters, items, FX, UI, sounds). World assets live in worlds/<id>/.
@@ -45,15 +45,22 @@ export const TEX = {
   glow: 'platformer.fx.glow',
   ui: 'platformer.ui',
   bat: 'platformer.enemy.bat',
+  nexarBat: 'platformer.enemy.nexar-bat',
   golem: 'platformer.enemy.golem',
   spitter: 'platformer.enemy.spitter',
+  sporeSpitter: 'platformer.enemy.spore-spitter',
+  spore: 'platformer.enemy.spore',
   drone: 'platformer.enemy.drone',
   sentinel: 'platformer.enemy.sentinel',
   turret: 'platformer.enemy.turret',
   guardian: 'platformer.enemy.guardian',
+  organicGuardian: 'platformer.enemy.organic-guardian',
   electricDrone: 'platformer.enemy.electric-drone',
   technician: 'platformer.enemy.technician',
+  bioTechnician: 'platformer.enemy.bio-technician',
+  stalker: 'platformer.enemy.stalker',
   omega: 'platformer.enemy.omega',
+  swarmQueen: 'platformer.enemy.swarm-queen',
   projectiles: 'platformer.projectiles',
   abilityIcons: 'platformer.ability-icons',
 } as const;
@@ -100,15 +107,22 @@ export const PLATFORMER_ASSETS: readonly AssetDef[] = [
   { kind: 'image', key: TEX.glow, width: 32, height: 32, credit: PROCEDURAL, drawPlaceholder: drawGlow },
   // url: 'assets/platformer/enemies/bat.png', etc.
   { kind: 'spritesheet', key: TEX.bat, frameWidth: 16, frameHeight: 16, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawBatFrame },
+  { kind: 'spritesheet', key: TEX.nexarBat, frameWidth: 16, frameHeight: 16, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawNexarBatFrame },
   { kind: 'spritesheet', key: TEX.golem, frameWidth: 24, frameHeight: 24, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawGolemFrame },
   { kind: 'spritesheet', key: TEX.spitter, frameWidth: 16, frameHeight: 16, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawSpitterFrame },
+  { kind: 'spritesheet', key: TEX.sporeSpitter, frameWidth: 24, frameHeight: 24, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawSporeSpitterFrame },
+  { kind: 'spritesheet', key: TEX.spore, frameWidth: 8, frameHeight: 8, frameCount: 2, credit: PLACEHOLDER, drawPlaceholder: drawSporeProjectileFrame },
   { kind: 'spritesheet', key: TEX.drone, frameWidth: 16, frameHeight: 16, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawDroneFrame },
   { kind: 'spritesheet', key: TEX.sentinel, frameWidth: 24, frameHeight: 24, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawSentinelFrame },
   { kind: 'spritesheet', key: TEX.turret, frameWidth: 24, frameHeight: 24, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawTurretFrame },
   { kind: 'spritesheet', key: TEX.guardian, frameWidth: 24, frameHeight: 32, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawGuardianFrame },
+  { kind: 'spritesheet', key: TEX.organicGuardian, frameWidth: 24, frameHeight: 32, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawOrganicGuardianFrame },
   { kind: 'spritesheet', key: TEX.electricDrone, frameWidth: 24, frameHeight: 24, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawElectricDroneFrame },
   { kind: 'spritesheet', key: TEX.technician, frameWidth: 24, frameHeight: 32, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawTechnicianFrame },
+  { kind: 'spritesheet', key: TEX.bioTechnician, frameWidth: 24, frameHeight: 32, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawBioTechnicianFrame },
+  { kind: 'spritesheet', key: TEX.stalker, frameWidth: 24, frameHeight: 24, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawStalkerFrame },
   { kind: 'spritesheet', key: TEX.omega, frameWidth: 48, frameHeight: 48, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawOmegaFrame },
+  { kind: 'spritesheet', key: TEX.swarmQueen, frameWidth: 48, frameHeight: 48, frameCount: 5, credit: PLACEHOLDER, drawPlaceholder: drawSwarmQueenFrame },
   { kind: 'spritesheet', key: TEX.projectiles, frameWidth: 8, frameHeight: 8, frameCount: 4, credit: PLACEHOLDER, drawPlaceholder: drawProjectileFrame },
   { kind: 'spritesheet', key: TEX.abilityIcons, frameWidth: 8, frameHeight: 8, frameCount: 3, credit: PLACEHOLDER, drawPlaceholder: drawAbilityIcon },
   ...Object.values(AUDIO),
